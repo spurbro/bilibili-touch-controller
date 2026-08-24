@@ -162,8 +162,14 @@
       const barBg = this.hud.querySelector('#bili-hud-bar-bg');
       const barFill = this.hud.querySelector('#bili-hud-bar-fill');
 
-      if (options.icon) iconEl.innerHTML = options.icon;
-      if (options.title) titleEl.innerHTML = options.title;
+      if (options.icon !== undefined) {
+        iconEl.innerHTML = options.icon || '';
+        iconEl.style.display = options.icon ? 'flex' : 'none';
+      }
+
+      if (options.title !== undefined) {
+        titleEl.innerHTML = options.title || '';
+      }
       
       if (options.time) {
         timeEl.style.display = 'block';
@@ -455,11 +461,13 @@
       const rate = config.longPressSpeed || 2.0;
       this.video.playbackRate = rate;
 
+      // Briefly display an ultra-subtle translucent speed badge, then auto-fade immediately
       this.showHUD({
-        icon: ICONS.speed,
-        title: `<span class="bili-touch-hud-rate-badge">⏩ ${rate}X 倍速播放中</span>`,
+        icon: '',
+        title: `<span class="bili-touch-hud-rate-badge">⏩ ${rate}X</span>`,
         isRate: true,
-        autoHide: false
+        autoHide: true,
+        hideDelay: 450
       });
     }
 
