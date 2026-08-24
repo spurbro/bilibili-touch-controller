@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B站触控手势设置</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="#FB7299">
+            <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>B站触控手势助手</h1>
+          <span class="version">v1.0.0 (Edge / Win)</span>
+        </div>
+      </div>
+      <div class="status-badge" id="statusBadge">已就绪</div>
+    </header>
+
+    <!-- Main Content / Settings List -->
+    <main class="content">
+      <!-- Section: Swipe Gestures -->
+      <section class="section">
+        <div class="section-title">滑动进度与调节</div>
+        
+        <!-- Enable Seek -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">左右滑动快进/快退</span>
+            <span class="setting-desc">在视频画面左右滑动快速跳转时间</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableSeek">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Seek Sensitivity -->
+        <div class="setting-subitem" id="seekSensitivityWrap">
+          <div class="slider-header">
+            <span>滑动跨度灵敏度</span>
+            <span class="slider-value" id="seekSensitivityVal">90 秒</span>
+          </div>
+          <input type="range" id="seekSensitivity" min="30" max="240" step="15" value="90">
+          <div class="slider-scale">
+            <span>微调 (30s)</span>
+            <span>默认 (90s)</span>
+            <span>大跨度 (240s)</span>
+          </div>
+        </div>
+
+        <!-- Volume -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">右侧上下滑动调音量</span>
+            <span class="setting-desc">屏幕右半区上下滑动控制音量 (0%~100%)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableVolume">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Brightness -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">左侧上下滑动调亮度</span>
+            <span class="setting-desc">屏幕左半区上下滑动调节画面亮度</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableBrightness">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Section: Long Press & Tap -->
+      <section class="section">
+        <div class="section-title">长按与双击手势</div>
+
+        <!-- Long Press -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">长按屏幕倍速播放</span>
+            <span class="setting-desc">按住画面触发高倍速，松手恢复原速</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableLongPress">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- Long Press Speed -->
+        <div class="setting-subitem" id="longPressSpeedWrap">
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" name="longPressSpeed" value="2.0">
+              <span class="radio-label">2.0X</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="longPressSpeed" value="2.5">
+              <span class="radio-label">2.5X</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="longPressSpeed" value="3.0">
+              <span class="radio-label">3.0X</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="longPressSpeed" value="4.0">
+              <span class="radio-label">4.0X</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Double Tap -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">双击快捷操作</span>
+            <span class="setting-desc">双击画面切换播放/暂停或快进10秒</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableDoubleTap">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-subitem" id="doubleTapActionWrap">
+          <select id="doubleTapAction" class="select-dropdown">
+            <option value="smart">智能模式（两侧快进退10秒，中间暂停）</option>
+            <option value="play_pause">全屏双击仅切换播放/暂停</option>
+            <option value="skip">全屏双击仅快进/快退10秒</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Section: Advanced -->
+      <section class="section">
+        <div class="section-title">高级选项</div>
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="setting-name">鼠标手势模拟（测试用）</span>
+            <span class="setting-desc">开启后可用鼠标左键拖拽模拟触控手势</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="enableMouseSimulation">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <button class="btn-reset" id="btnReset">恢复默认设置</button>
+      <span class="toast" id="saveToast">设置已自动保存 ✓</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

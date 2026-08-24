@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "哔哩哔哩网页版触控手势助手 (Bilibili Touch Controller)",
+  "version": "1.0.0",
+  "description": "专为 Windows 触屏设备及 Microsoft Edge 优化的 B 站网页端触控增强插件，支持左右滑动快进快退、上下滑动调节音量/亮度、长按倍速与手势防误触。",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.bilibili.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "B站触控手势设置",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://www.bilibili.com/video/*",
+        "*://www.bilibili.com/bangumi/play/*",
+        "*://www.bilibili.com/cheese/play/*",
+        "*://www.bilibili.com/medialist/play/*",
+        "*://www.bilibili.com/festival/*",
+        "*://live.bilibili.com/*",
+        "*://*.bilibili.com/*"
+      ],
+      "js": [
+        "content/touch-controller.js"
+      ],
+      "css": [
+        "content/touch-overlay.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
