@@ -10,7 +10,6 @@ const DEFAULT_CONFIG = {
   enableLongPress: true,
   longPressSpeed: 2.0,
   enableDoubleTap: true,
-  doubleTapAction: 'smart',
   enableMouseSimulation: false,
   preventGhostClick: true
 };
@@ -36,10 +35,6 @@ function updateUIState() {
   const enableLongPress = document.getElementById('enableLongPress').checked;
   const longPressWrap = document.getElementById('longPressSpeedWrap');
   if (longPressWrap) longPressWrap.style.display = enableLongPress ? 'block' : 'none';
-
-  const enableDoubleTap = document.getElementById('enableDoubleTap').checked;
-  const doubleTapWrap = document.getElementById('doubleTapActionWrap');
-  if (doubleTapWrap) doubleTapWrap.style.display = enableDoubleTap ? 'block' : 'none';
 }
 
 // Load and populate settings
@@ -65,9 +60,6 @@ function loadSettings() {
     const speedRadio = document.querySelector(`input[name="longPressSpeed"][value="${currentSpeed}"]`);
     if (speedRadio) speedRadio.checked = true;
 
-    // Dropdown
-    document.getElementById('doubleTapAction').value = config.doubleTapAction || 'smart';
-
     updateUIState();
   });
 }
@@ -85,7 +77,6 @@ function saveSettings() {
     enableLongPress: document.getElementById('enableLongPress').checked,
     longPressSpeed: longPressSpeed,
     enableDoubleTap: document.getElementById('enableDoubleTap').checked,
-    doubleTapAction: document.getElementById('doubleTapAction').value,
     enableMouseSimulation: document.getElementById('enableMouseSimulation').checked,
     preventGhostClick: true
   };
@@ -121,12 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
   radios.forEach((radio) => {
     radio.addEventListener('change', saveSettings);
   });
-
-  // Dropdown listener
-  const select = document.getElementById('doubleTapAction');
-  if (select) {
-    select.addEventListener('change', saveSettings);
-  }
 
   // Reset button
   const resetBtn = document.getElementById('btnReset');

@@ -14,8 +14,7 @@
     enableBrightness: true,
     enableLongPress: true,
     longPressSpeed: 2.0,
-    enableDoubleTap: true,
-    doubleTapAction: 'smart', // 'smart' (sides skip 10s, center play/pause), 'play_pause', 'skip'
+    enableDoubleTap: true, // Double tap to toggle Fullscreen
     enableMouseSimulation: false, // For desktop testing if desired
     preventGhostClick: true
   };
@@ -54,6 +53,8 @@
     volumeMute: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>`,
     brightness: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>`,
     speed: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.43zM10.59 15.41a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>`,
+    fullscreen: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>`,
+    exitFullscreen: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>`,
     play: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`,
     pause: `<svg class="bili-touch-hud-icon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`
   };
@@ -515,34 +516,64 @@
 
     executeDoubleTap(x, y, containerWidth) {
       this.showRipple(x, y);
-      const action = config.doubleTapAction || 'smart';
+      this.toggleFullscreen();
+    }
 
-      if (action === 'smart') {
-        const leftBoundary = containerWidth * 0.25;
-        const rightBoundary = containerWidth * 0.75;
+    toggleFullscreen() {
+      // 1. Try Bilibili native fullscreen button
+      const fullBtn =
+        this.container.querySelector('.bpx-player-ctrl-full') ||
+        document.querySelector('.bpx-player-ctrl-full') ||
+        this.container.querySelector('.bilibili-player-video-btn-fullscreen') ||
+        document.querySelector('.bilibili-player-video-btn-fullscreen') ||
+        this.container.querySelector('[data-title*="全屏"]') ||
+        document.querySelector('[data-title*="全屏"]');
 
-        if (x < leftBoundary) {
-          // Skip backward 10s
-          this.video.currentTime = Math.max(0, this.video.currentTime - 10);
-          this.showSideJump('left', 10);
-        } else if (x > rightBoundary) {
-          // Skip forward 10s
-          this.video.currentTime = Math.min(this.video.duration || 0, this.video.currentTime + 10);
-          this.showSideJump('right', 10);
-        } else {
-          // Center: Toggle Play/Pause
-          this.togglePlayPause();
+      if (fullBtn) {
+        fullBtn.click();
+        setTimeout(() => {
+          const isFull = !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.querySelector('.bpx-player-container[data-screen="full"]') ||
+            document.querySelector('.bpx-player-container[data-screen="web"]')
+          );
+          this.showHUD({
+            icon: isFull ? ICONS.fullscreen : ICONS.exitFullscreen,
+            title: isFull ? '进入全屏' : '退出全屏',
+            autoHide: true,
+            hideDelay: 500
+          });
+        }, 80);
+        return;
+      }
+
+      // 2. Fallback to HTML5 Fullscreen API
+      if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
         }
-      } else if (action === 'play_pause') {
-        this.togglePlayPause();
-      } else if (action === 'skip') {
-        if (x < containerWidth * 0.5) {
-          this.video.currentTime = Math.max(0, this.video.currentTime - 10);
-          this.showSideJump('left', 10);
-        } else {
-          this.video.currentTime = Math.min(this.video.duration || 0, this.video.currentTime + 10);
-          this.showSideJump('right', 10);
+        this.showHUD({
+          icon: ICONS.exitFullscreen,
+          title: '退出全屏',
+          autoHide: true,
+          hideDelay: 500
+        });
+      } else {
+        const target = this.container || this.video;
+        if (target.requestFullscreen) {
+          target.requestFullscreen().catch(() => {});
+        } else if (target.webkitRequestFullscreen) {
+          target.webkitRequestFullscreen();
         }
+        this.showHUD({
+          icon: ICONS.fullscreen,
+          title: '进入全屏',
+          autoHide: true,
+          hideDelay: 500
+        });
       }
     }
 
