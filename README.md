@@ -3,17 +3,39 @@
 # 📺 哔哩哔哩网页版触控手势助手
 ### Bilibili Touch Controller for Windows & Microsoft Edge / Chrome
 
+[![GitHub Release](https://img.shields.io/github/v/release/spurbro/bilibili-touch-controller?color=FB7299&label=Release&style=flat-square)](https://github.com/spurbro/bilibili-touch-controller/releases/latest)
+[![Download ZIP](https://img.shields.io/badge/Download-ZIP%20Package-blue?style=flat-square&logo=github)](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.0.0/bilibili-touch-controller-v1.0.0.zip)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-brightgreen.svg?style=flat-square)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Edge%20%7C%20Chrome-blue.svg?style=flat-square)](https://www.microsoft.com/edge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-pink.svg?style=flat-square)](CONTRIBUTING.md)
 
-**专为 Windows 触屏设备（Surface、二合一笔记本、触屏轻薄本）与 Microsoft Edge 量身打造的 B 站网页端触控增强扩展。**  
-彻底解决网页端触控误触为鼠标点击、无法手势快进/快退的痛点，赋予网页端媲美移动 App 的丝滑手势体验！
+**专为 Windows 触屏设备（Surface、二合一笔记本、触屏轻薄本）与 Microsoft Edge / Chrome 量身打造的 B 站网页端触控增强扩展。**  
+彻底解决网页端触控误触为鼠标点击、无法手势快进/快退、长按弹出右键等痛点，赋予网页端媲美移动 App 的丝滑手势体验！
 
-[✨ 核心特性](#-核心特性) • [🚀 安装步骤](#-安装步骤) • [🎮 手势指南](#-手势操作指南) • [⚙️ 设置面板](#️-个性化配置) • [📖 原理解析](docs/ARCHITECTURE.md)
+[📥 下载插件](#-快速下载与安装) • [✨ 核心特性](#-核心特性) • [🎮 手势指南](#-手势操作指南) • [⚙️ 设置面板](#️-个性化配置) • [📖 原理解析](docs/ARCHITECTURE.md)
 
 </div>
+
+---
+
+## 📥 快速下载与安装
+
+无需配置任何开发环境，普通用户仅需 3 步即可在 Edge / Chrome 中使用：
+
+### 1. 下载并解压安装包
+- 点击直达下载最新版本：👉 **[📦 下载 bilibili-touch-controller-v1.0.0.zip](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.0.0/bilibili-touch-controller-v1.0.0.zip)**  
+  *(或前往 [GitHub Releases 页面](https://github.com/spurbro/bilibili-touch-controller/releases) 下载)*
+- 下载完成后，将 ZIP 压缩包解压到您电脑的任意本地文件夹（例如 `D:\Extensions\bilibili-touch-controller`）。
+
+### 2. 在浏览器中开启“开发人员模式”
+- **Microsoft Edge**：在地址栏输入 `edge://extensions/` 并按回车。
+- **Google Chrome**：在地址栏输入 `chrome://extensions/` 并按回车。
+- 打开页面左侧边栏（或右上角）的 **“开发人员模式”** 开关。
+
+### 3. 加载扩展文件夹
+1. 点击页面上方出现的 **“加载解压缩的扩展”**（Load unpacked）按钮。
+2. 在文件弹窗中选择刚刚**解压出来的文件夹**，点击“选择文件夹”。
+3. 安装立即完成！打开任意 [哔哩哔哩视频播放页](https://www.bilibili.com) 即可畅享触控手势。
 
 ---
 
@@ -23,17 +45,18 @@
   - 向左滑动快退，向右滑动快进。
   - 屏幕中央弹出**高透明度极简毛玻璃 HUD 浮层**，实时显示进度跳转差值（如 `+15s` / `-20s`）、目标时间戳与进度条，松手精准跳转。
   - 支持灵敏度跨度调节（30s ~ 240s）。
-- ☀️ / 🔊 **双区分区垂直滑动**：
-  - **屏幕左半区垂直滑动**：无级调节画面明暗亮度（20% ~ 200%）。
+- ☀️ **自适应 Tone-Mapping 调光（柔和提亮不过曝）**：
+  - **屏幕左半区垂直滑动**：调节视频画面亮度（20% ~ 160%）。
+  - 采用高光软压缩与对比度/饱和度自适应补偿算法，柔和提亮暗部细节，**彻底告别刺眼死白与局部过曝**。
+- 🔊 **右半区无级音量调节**：
   - **屏幕右半区垂直滑动**：平滑调节视频原生音量（0% ~ 100%）。
-- ⚡ **长按屏幕高倍速播放**：
+- ⚡ **长按屏幕高倍速播放（已彻底拦截右键弹窗）**：
   - 按住屏幕任意位置超过 400ms，自动进入高速播放（默认 2.0x，支持 2.5x / 3.0x / 4.0x），松手立刻还原原倍速。
+  - 深度优化 Windows 触屏底层事件，彻底解决松手触发系统/播放器右键菜单的问题。
 - ⏯️ **轻点屏幕无感播放 / 暂停**：
   - 单击视频画面直接切换播放/暂停，**零 HUD 遮挡，不唤出底部控制栏**，保持沉浸式纯净观影。
 - ⛶ **双击全屏 / 取消全屏**：
   - 完美保留并增强网页端原生双击习惯：双击视频画面任意位置即可快速进入全屏或退出全屏。
-- 🔍 **超高透明度 HUD 视效**：
-  - 所有滑动 HUD 反馈均经过深度半透明磨砂玻璃调校（背景透明度 > 60%），轻量非侵入，完全不遮挡画面关键细节。
 - 🛡️ **智能防误触与幽灵点击拦截**：
   - 针对 Windows Chromium 触屏特性，彻底拦截手势结束后产生的合成鼠标点击，杜绝“手势滑动完视频自动暂停”的问题。
   - 播放器底部控制栏（清晰度、全屏、弹幕开关等）保留原生穿透，交互互不干扰。
@@ -44,37 +67,15 @@
 
 ## 🎮 手势操作指南
 
-| 手势动作 | 作用区域 | 功能说明 | 屏幕反馈 |
+| 手势动作 | 作用区域 | 功能说明 | 屏幕视觉反馈 |
 | :--- | :--- | :--- | :--- |
-| **轻点屏幕一次** | 视频任意区域 | **播放 / 暂停切换** | 无 HUD 遮挡，不唤醒控制栏，极致纯净 |
+| **轻点屏幕一次** | 视频任意区域 | **播放 / 暂停切换** | **无任何 HUD 遮挡，不唤醒控制栏，极致纯净** |
 | **双击画面** | 视频任意区域 | **全屏 / 取消全屏切换** | ⛶ 高透全屏状态图标提示 |
 | **水平向右划动** | 视频任意区域 | **视频快进 (Seek Forward)** | ⏩ 高透快进 `+Xs`、目标时间戳与进度条 |
 | **水平向左划动** | 视频任意区域 | **视频快退 (Seek Backward)** | ⏪ 高透快退 `-Xs`、目标时间戳与进度条 |
-| **垂直上下划动** | 屏幕左半侧 | **调节画面亮度 (20% ~ 200%)** | ☀️ 高透亮度百分比及亮度调节条 |
+| **垂直上下划动** | 屏幕左半侧 | **Tone-Mapping 柔和亮度调节** | ☀️ **柔和提亮不过曝**，高透亮度调节条 |
 | **垂直上下划动** | 屏幕右半侧 | **调节视频音量 (0% ~ 100%)** | 🔊 高透音量百分比及音量调节条 |
-| **长按画面 (>400ms)** | 视频任意区域 | **临时高倍速播放 (2.0x ~ 4.0x)** | ⏩ `2.0X 倍速播放中` 高透呼吸动画 |
-
----
-
-## 🚀 安装步骤 (Microsoft Edge / Chrome)
-
-本扩展基于 Chrome / Edge 官方 **Manifest V3** 标准开发，无需打包即可直接在浏览器中以开发者模式加载使用：
-
-### 第一步：打开浏览器扩展管理页面
-- 在 **Microsoft Edge** 地址栏输入：`edge://extensions/` 并按回车。
-- 或在 **Google Chrome** 地址栏输入：`chrome://extensions/` 并按回车。
-
-### 第二步：开启开发者模式
-- 开启页面左侧（或右上角）的 **“开发人员模式”** 开关。
-
-### 第三步：加载解压缩的扩展
-1. 点击顶部的 **“加载解压缩的扩展”**（Load unpacked）按钮。
-2. 在弹出的文件窗口中选择本项目根目录：
-   ```text
-   C:\Users\15695\.gemini\antigravity\scratch\bilibili-touch-controller
-   ```
-3. 点击 **“选择文件夹”**，安装立即完成！
-4. 打开或刷新任意 [Bilibili 视频页面](https://www.bilibili.com) 即可享受触控手势。
+| **长按画面 (>400ms)** | 视频任意区域 | **临时高倍速播放 (2.0x ~ 4.0x)** | ⏩ `2.0X 倍速播放中`（**无右键弹窗**） |
 
 ---
 
@@ -96,7 +97,7 @@
 bilibili-touch-controller/
 ├── manifest.json              # Chrome / Edge Manifest V3 扩展配置文件
 ├── content/
-│   ├── touch-controller.js    # 触控手势捕获、Seek 算法与防误触核心引擎
+│   ├── touch-controller.js    # 触控手势捕获、Tone-Mapping 算法与防误触核心引擎
 │   └── touch-overlay.css      # 高透毛玻璃 HUD 浮层与触控样式
 ├── popup/
 │   ├── popup.html             # 设置弹窗 HTML
