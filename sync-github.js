@@ -11,7 +11,7 @@ const publicUrl = `https://github.com/spurbro/${repoName}.git`;
 
 try {
   execSync(`"${gitExe}" add .`, { stdio: 'pipe' });
-  execSync(`"${gitExe}" commit -m "refactor: Restore double-tap to toggle fullscreen and remove double-tap skip"`, { stdio: 'pipe' });
+  execSync(`"${gitExe}" commit -m "feat: Single-tap silent play/pause without controls/HUD and ultra-translucent HUD styling"`, { stdio: 'pipe' });
   execSync(`"${gitExe}" remote set-url origin "${pushUrl}"`, { stdio: 'pipe' });
   const out = execSync(`"${gitExe}" push origin main`, { stdio: 'pipe' }).toString();
   console.log('Push output:', out);

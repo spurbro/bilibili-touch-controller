@@ -205,17 +205,7 @@
       ripple.style.left = `${x}px`;
       ripple.style.top = `${y}px`;
       this.container.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 500);
-    }
-
-    showSideJump(side, seconds) {
-      const indicator = document.createElement('div');
-      indicator.className = `bili-touch-jump-indicator ${side === 'left' ? 'bili-touch-jump-left' : 'bili-touch-jump-right'}`;
-      const icon = side === 'left' ? ICONS.backward : ICONS.forward;
-      const text = side === 'left' ? `-${seconds}s` : `+${seconds}s`;
-      indicator.innerHTML = `${icon}<span>${text}</span>`;
-      this.container.appendChild(indicator);
-      setTimeout(() => indicator.remove(), 600);
+      setTimeout(() => ripple.remove(), 400);
     }
 
     bindEvents() {
@@ -478,7 +468,7 @@
       const rect = this.container.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
-      const isDoubleTap = (now - this.lastTapTime < 280) && Math.hypot(clickX - this.lastTapX, clickY - this.lastTapY) < 35;
+      const isDoubleTap = (now - this.lastTapTime < 250) && Math.hypot(clickX - this.lastTapX, clickY - this.lastTapY) < 40;
 
       if (isDoubleTap && config.enableDoubleTap) {
         // Clear pending single tap
@@ -493,25 +483,22 @@
         this.lastTapX = clickX;
         this.lastTapY = clickY;
 
-        // Schedule single tap execution
+        // Schedule single tap execution (toggle play/pause silently without HUD and without waking control bar)
         this.singleTapTimeout = setTimeout(() => {
           this.executeSingleTap(clickX, clickY);
           this.singleTapTimeout = null;
-        }, 280);
+        }, 240);
       }
     }
 
     executeSingleTap(x, y) {
       this.showRipple(x, y);
-      // Toggle player controls or native click behavior
-      // Trigger mousemove on container to wake up B站 native controls
-      const mouseMoveEvt = new MouseEvent('mousemove', {
-        bubbles: true,
-        cancelable: true,
-        clientX: this.container.getBoundingClientRect().left + x,
-        clientY: this.container.getBoundingClientRect().top + y
-      });
-      this.container.dispatchEvent(mouseMoveEvt);
+      // Toggle play/pause directly with zero HUD and without waking up control bar
+      if (this.video.paused) {
+        this.video.play().catch(() => {});
+      } else {
+        this.video.pause();
+      }
     }
 
     executeDoubleTap(x, y, containerWidth) {

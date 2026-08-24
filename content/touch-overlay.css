@@ -26,35 +26,36 @@
 }
 
 /* ==========================================================================
-   Modern Frosted Glass HUD (Heads-Up Display)
+   Ultra-Translucent Frosted Glass HUD (High Transparency, Non-Intrusive)
    ========================================================================== */
 
 .bili-touch-hud {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
-  min-width: 160px;
-  max-width: 320px;
-  padding: 16px 24px;
-  background: rgba(18, 18, 26, 0.82);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
+  transform: translate(-50%, -50%) scale(0.92);
+  min-width: 140px;
+  max-width: 280px;
+  padding: 12px 20px;
+  /* High transparency so video behind remains clearly visible */
+  background: rgba(12, 12, 18, 0.42);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.95);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   text-align: center;
   z-index: 999999;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0.18s;
+  transition: opacity 0.16s cubic-bezier(0.2, 0, 0, 1), transform 0.16s cubic-bezier(0.2, 0, 0, 1), visibility 0.16s;
 }
 
 .bili-touch-hud.bili-touch-hud-visible {
-  opacity: 1;
+  opacity: 0.92;
   visibility: visible;
   transform: translate(-50%, -50%) scale(1);
 }
@@ -64,46 +65,46 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .bili-touch-hud-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   fill: #FB7299;
-  filter: drop-shadow(0 2px 8px rgba(251, 114, 153, 0.4));
+  filter: drop-shadow(0 2px 6px rgba(251, 114, 153, 0.35));
 }
 
 .bili-touch-hud-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .bili-touch-hud-delta {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #FB7299;
 }
 
 .bili-touch-hud-time {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
   font-variant-numeric: tabular-nums;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 /* Progress bar inside HUD */
 .bili-touch-hud-bar-bg {
   width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
 }
@@ -111,20 +112,21 @@
 .bili-touch-hud-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #FF6699 0%, #FB7299 100%);
-  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(255, 102, 153, 0.9) 0%, rgba(251, 114, 153, 0.9) 100%);
+  border-radius: 2px;
   transition: width 0.08s ease-out;
-  box-shadow: 0 0 8px rgba(251, 114, 153, 0.6);
+  box-shadow: 0 0 6px rgba(251, 114, 153, 0.4);
 }
 
 /* Special styling for Long Press Speed HUD */
 .bili-touch-hud-rate {
-  border-color: rgba(251, 114, 153, 0.4);
+  border-color: rgba(251, 114, 153, 0.3);
+  background: rgba(15, 12, 20, 0.45);
 }
 
 .bili-touch-hud-rate .bili-touch-hud-title {
   color: #FB7299;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .bili-touch-hud-rate-badge {
@@ -137,83 +139,38 @@
 @keyframes bili-touch-pulse {
   0%, 100% {
     transform: scale(1);
-    opacity: 1;
+    opacity: 0.95;
   }
   50% {
-    transform: scale(1.05);
-    opacity: 0.85;
+    transform: scale(1.04);
+    opacity: 0.75;
   }
 }
 
 /* ==========================================================================
-   Touch Ripples (Feedback for tap & double tap)
+   Touch Ripples
    ========================================================================== */
 
 .bili-touch-ripple {
   position: absolute;
-  width: 60px;
-  height: 60px;
-  margin-top: -30px;
-  margin-left: -30px;
+  width: 50px;
+  height: 50px;
+  margin-top: -25px;
+  margin-left: -25px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 114, 153, 0.5) 0%, rgba(251, 114, 153, 0) 70%);
+  background: radial-gradient(circle, rgba(251, 114, 153, 0.35) 0%, rgba(251, 114, 153, 0) 70%);
   pointer-events: none;
   z-index: 999998;
-  animation: bili-touch-ripple-anim 0.45s ease-out forwards;
+  animation: bili-touch-ripple-anim 0.35s ease-out forwards;
 }
 
 @keyframes bili-touch-ripple-anim {
   0% {
-    transform: scale(0.2);
-    opacity: 0.9;
+    transform: scale(0.3);
+    opacity: 0.8;
   }
   100% {
-    transform: scale(2.2);
+    transform: scale(1.8);
     opacity: 0;
-  }
-}
-
-/* Double-tap side jump indicator */
-.bili-touch-jump-indicator {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #FFFFFF;
-  font-size: 13px;
-  font-weight: 600;
-  pointer-events: none;
-  z-index: 999998;
-  animation: bili-touch-jump-anim 0.5s ease-out forwards;
-}
-
-.bili-touch-jump-left {
-  left: 15%;
-}
-
-.bili-touch-jump-right {
-  right: 15%;
-}
-
-@keyframes bili-touch-jump-anim {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) scale(0.6);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.05);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-50%) scale(1);
   }
 }
