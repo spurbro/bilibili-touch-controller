@@ -109,8 +109,9 @@
       this.lastTapY = 0;
       this.singleTapTimeout = null;
 
-      // Ghost click suppression
+      // Ghost click & contextmenu suppression
       this.suppressClickUntil = 0;
+      this.suppressContextMenuUntil = 0;
 
       this.init();
     }
@@ -208,6 +209,23 @@
       setTimeout(() => ripple.remove(), 400);
     }
 
+    dismissBiliContextMenu() {
+      const selectors = [
+        '.bpx-player-contextmenu',
+        '.bilibili-player-context-menu',
+        '.bpx-player-context-menu',
+        'div[class*="player-contextmenu"]',
+        'div[class*="player-context-menu"]',
+        '.bpx-state-show[class*="contextmenu"]'
+      ];
+      selectors.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((menu) => {
+          menu.style.display = 'none';
+          menu.classList.remove('active', 'show', 'bpx-state-show');
+        });
+      });
+    }
+
     bindEvents() {
       const el = this.touchLayer;
 
@@ -218,14 +236,37 @@
       el.addEventListener('pointercancel', (e) => this.onPointerCancel(e), { passive: false });
 
       // Capture and suppress synthetic ghost clicks after gestures
-      const suppressHandler = (e) => {
+      const suppressClickHandler = (e) => {
         if (Date.now() < this.suppressClickUntil) {
           e.stopPropagation();
           e.preventDefault();
         }
       };
-      this.container.addEventListener('click', suppressHandler, true);
-      this.container.addEventListener('dblclick', suppressHandler, true);
+      this.container.addEventListener('click', suppressClickHandler, true);
+      this.container.addEventListener('dblclick', suppressClickHandler, true);
+
+      // Thoroughly block Windows touch press-and-hold right-click context menu
+      const suppressContextMenuHandler = (e) => {
+        if (
+          this.isLongPressing ||
+          this.hasExecutedGesture ||
+          this.isTracking ||
+          Date.now() < this.suppressContextMenuUntil ||
+          e.pointerType === 'touch' ||
+          e.pointerType === 'pen'
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          this.dismissBiliContextMenu();
+          return false;
+        }
+      };
+
+      el.addEventListener('contextmenu', suppressContextMenuHandler, true);
+      this.container.addEventListener('contextmenu', suppressContextMenuHandler, true);
+      document.addEventListener('contextmenu', suppressContextMenuHandler, true);
+      window.addEventListener('contextmenu', suppressContextMenuHandler, true);
     }
 
     isTouchInput(e) {
@@ -388,6 +429,8 @@
     startLongPress() {
       this.isLongPressing = true;
       this.hasExecutedGesture = true;
+      this.suppressContextMenuUntil = Date.now() + 2000;
+      this.dismissBiliContextMenu();
       this.originalPlaybackRate = this.video.playbackRate || 1.0;
       const rate = config.longPressSpeed || 2.0;
       this.video.playbackRate = rate;
@@ -404,6 +447,9 @@
       if (this.isLongPressing) {
         this.isLongPressing = false;
         this.video.playbackRate = this.originalPlaybackRate || 1.0;
+        this.suppressContextMenuUntil = Date.now() + 1500;
+        this.suppressClickUntil = Date.now() + 600;
+        this.dismissBiliContextMenu();
         this.hideHUDImmediately();
       }
     }
@@ -419,7 +465,9 @@
       // End long press if active
       if (this.isLongPressing) {
         this.stopLongPress();
-        this.suppressClickUntil = Date.now() + 400;
+        this.suppressClickUntil = Date.now() + 600;
+        this.suppressContextMenuUntil = Date.now() + 1500;
+        this.dismissBiliContextMenu();
         this.cleanupPointer();
         return;
       }

@@ -85,23 +85,27 @@ $$t_{\text{target}} = \text{clamp}(0, D, t_{\text{start}} + \Delta t)$$
 - **右侧半屏 ($X_{\text{start}} \ge 0.5 \times W$)**：控制视频原生音量。
   - 直接写入 HTML5 Video 的 `video.volume` 属性（`0.0 ~ 1.0`）。
 
-### 3.3 幽灵点击拦截机制 (Ghost Click Suppression)
-当一次滑动、亮度调整或长按手势结束时，设置一个时间戳门限：
-```javascript
-this.suppressClickUntil = Date.now() + 400;
-```
-在播放器顶层以 **捕获阶段 (Capture Phase)** 监听 `click` 和 `dblclick` 事件：
-```javascript
-const suppressHandler = (e) => {
-  if (Date.now() < this.suppressClickUntil) {
-    e.stopPropagation();
-    e.preventDefault();
-  }
-};
-this.container.addEventListener('click', suppressHandler, true);
-this.container.addEventListener('dblclick', suppressHandler, true);
-```
-彻底阻断 Windows 合成鼠标点击穿透至 B 站播放器核心，解决“滑动快进完视频自动暂停”的顽疾。
+### 3.3 幽灵点击与 Windows 触屏右键弹窗拦截机制 (Ghost Click & Context Menu Suppression)
+在 Windows 触控系统上，长按屏幕会被系统默认识别为“鼠标右键”，并在松手时分发 `contextmenu` 事件，导致弹出系统菜单或 B 站播放器右键菜单。
+
+为此，插件采用了**全链路防误触双重拦截技术**：
+1. **右键事件多级捕获吞噬**：
+   在 `pointerdown`、手势滑动及长按加速开始/松手阶段，设置上下文菜单拦截时间窗 `suppressContextMenuUntil`，并在捕获阶段拦截 `this.container`、`this.touchLayer` 和 `window` 的所有 `contextmenu` 事件：
+   ```javascript
+   const suppressContextMenuHandler = (e) => {
+     if (this.isLongPressing || this.hasExecutedGesture || this.isTracking || Date.now() < this.suppressContextMenuUntil || e.pointerType === 'touch') {
+       e.preventDefault();
+       e.stopPropagation();
+       e.stopImmediatePropagation();
+       this.dismissBiliContextMenu();
+       return false;
+     }
+   };
+   ```
+2. **主动清理残留菜单 DOM**：
+   在手势开始及结束时，主动遍历并关闭已渲染的 `.bpx-player-contextmenu` 元素，确保画面绝对干净。
+3. **合成鼠标点击拦截**：
+   设定 `suppressClickUntil` 门限，彻底吞噬手势抬手后产生的合成 `click` 与 `dblclick` 事件。
 
 ### 3.4 动态 DOM 监听与 SPA 路由适应
 利用 `MutationObserver` 监控 DOM 树变动，同时配合 URL 历史变更（`popstate`）与周期性健康检查，确保在任何分 P 切换或推荐视频跳转后，手势控制器都能在第一时间自动无缝挂载。

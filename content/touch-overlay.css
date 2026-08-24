@@ -11,18 +11,22 @@
   height: 100%;
   z-index: 38; /* Above video and danmaku, below floating control popups */
   touch-action: none !important;
+  -ms-touch-action: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -ms-user-select: none !important;
   pointer-events: auto;
   background: transparent;
 }
 
-/* Ensure video wrapper doesn't trigger edge touch panning */
+/* Ensure video wrapper doesn't trigger edge touch panning or default context menu */
 .bpx-player-container,
 .bpx-player-video-wrap,
 .bpx-player-video-area,
 .bilibili-player-video-wrap {
   touch-action: none !important;
+  -webkit-touch-callout: none !important;
 }
 
 /* ==========================================================================

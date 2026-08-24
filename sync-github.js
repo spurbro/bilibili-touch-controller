@@ -11,12 +11,12 @@ const publicUrl = `https://github.com/spurbro/${repoName}.git`;
 
 try {
   execSync(`"${gitExe}" add .`, { stdio: 'pipe' });
-  execSync(`"${gitExe}" commit -m "feat: Single-tap silent play/pause without controls/HUD and ultra-translucent HUD styling"`, { stdio: 'pipe' });
+  execSync(`"${gitExe}" commit -m "fix: Suppress Windows touch long-press right-click context menu popup"`, { stdio: 'pipe' });
   execSync(`"${gitExe}" remote set-url origin "${pushUrl}"`, { stdio: 'pipe' });
   const out = execSync(`"${gitExe}" push origin main`, { stdio: 'pipe' }).toString();
   console.log('Push output:', out);
   execSync(`"${gitExe}" remote set-url origin "${publicUrl}"`, { stdio: 'pipe' });
-  console.log(`\n🎉 Successfully synced updates to GitHub: https://github.com/spurbro/${repoName}`);
+  console.log(`\n🎉 Successfully pushed fix to GitHub: https://github.com/spurbro/${repoName}`);
 } catch (err) {
   console.error('Push error:', err.message, err.stderr ? err.stderr.toString() : '');
   try { execSync(`"${gitExe}" remote set-url origin "${publicUrl}"`, { stdio: 'pipe' }); } catch(e) {}
