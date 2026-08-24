@@ -77,11 +77,15 @@ $$t_{\text{target}} = \text{clamp}(0, D, t_{\text{start}} + \Delta t)$$
 
 在滑动过程中，仅实时计算并更新 HUD 上的目标时间预览与进度条，**不频繁触发视频 seek**（避免频繁解码导致卡顿）；只有当手指离开屏幕（`pointerup`）时，才执行最终的 `video.currentTime = targetSeekTime`。
 
-### 3.2 垂直滑动分区调控
+### 3.2 垂直滑动分区调控与画面防过曝自适应算法
 根据触摸起始点的 X 坐标将屏幕划分为左右双区：
-- **左侧半屏 ($X_{\text{start}} < 0.5 \times W$)**：控制视频画面亮度。
-  - 通过 CSS Filter 实现平滑亮度调节：`video.style.filter = 'brightness(' + brightness + ')'`。
-  - 亮度调节范围限制在 `20% ~ 200%`，避免画面全黑或严重过曝。
+- **左侧半屏 ($X_{\text{start}} < 0.5 \times W$)**：控制视频画面亮度（防过曝 Tone-Mapping 曲线调光）。
+  - **暗部下调 ($\le 100\%$)**：采用平滑线性亮度缩减 `brightness(val)`，最低限制至 20%，保持暗部柔和不发灰。
+  - **亮部提升 ($> 100\%$)**：传统线性倍增会导致高光死白、严重过曝。本插件创新采用**高光软压缩与对比度/饱和度动态补偿算法**：
+    $$\text{lift} = \text{brightness}(1 + x \times 0.32)$$
+    $$\text{contrast} = \text{contrast}(1 - x \times 0.14)$$
+    $$\text{saturate} = \text{saturate}(1 + x \times 0.08)$$
+    其中 $x = \text{val} - 1.0$。通过柔和提升暗部与中间调、压缩过亮高光并微幅补偿色彩饱和度，实现画质通透、明亮且绝不过曝的自然提亮效果。
 - **右侧半屏 ($X_{\text{start}} \ge 0.5 \times W$)**：控制视频原生音量。
   - 直接写入 HTML5 Video 的 `video.volume` 属性（`0.0 ~ 1.0`）。
 

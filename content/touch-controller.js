@@ -410,20 +410,40 @@
     }
 
     handleBrightness(deltaY, containerHeight) {
-      // Swipe up increases brightness, swipe down decreases (range 0.2 to 2.0)
+      // Swipe up increases brightness, swipe down decreases (range 0.2 to 1.6)
       const deltaRatio = -deltaY / (containerHeight * 0.8);
-      const newBrightness = Math.max(0.2, Math.min(2.0, this.startBrightness + deltaRatio));
+      const newBrightness = Math.max(0.2, Math.min(1.6, this.startBrightness + deltaRatio));
       this.currentBrightness = newBrightness;
-      this.video.style.filter = `brightness(${newBrightness})`;
+      this.applyBrightness(newBrightness);
 
       const percentage = Math.round(newBrightness * 100);
 
       this.showHUD({
         icon: ICONS.brightness,
         title: `亮度 ${percentage}%`,
-        progress: (newBrightness / 2.0) * 100,
+        progress: ((newBrightness - 0.2) / 1.4) * 100,
         autoHide: false
       });
+    }
+
+    applyBrightness(val) {
+      if (Math.abs(val - 1.0) < 0.01) {
+        this.video.style.filter = '';
+        return;
+      }
+
+      if (val <= 1.0) {
+        // Dimming: smooth linear reduction
+        this.video.style.filter = `brightness(${val.toFixed(3)})`;
+      } else {
+        // Brightening: Soft-knee highlight compression with contrast compensation & saturation preservation
+        // Prevents harsh white blowout/overexposure and lifts midtones naturally
+        const x = val - 1.0; // 0.0 to 0.6
+        const b = (1 + x * 0.32).toFixed(3);
+        const c = (1 - x * 0.14).toFixed(3);
+        const s = (1 + x * 0.08).toFixed(3);
+        this.video.style.filter = `brightness(${b}) contrast(${c}) saturate(${s})`;
+      }
     }
 
     startLongPress() {
