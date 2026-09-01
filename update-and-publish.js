@@ -97,7 +97,7 @@ async function main() {
 
   try {
     execSync(`"${gitExe}" add .`, { stdio: 'pipe' });
-    execSync(`"${gitExe}" commit -m "feat: Brief auto-fading ultra-subtle speed badge on long press"`, { stdio: 'pipe' });
+    execSync(`"${gitExe}" commit -m "feat: Move all HUDs to top bar with ultra-translucent non-intrusive styling"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${pushUrl}"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" push origin main`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${publicUrl}"`, { stdio: 'pipe' });

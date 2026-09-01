@@ -30,117 +30,131 @@
 }
 
 /* ==========================================================================
-   Ultra-Translucent Frosted Glass HUD (High Transparency, Non-Intrusive)
+   Top-Bar Ultra-Translucent Frosted Glass HUD (High Transparency, Non-Intrusive)
    ========================================================================== */
 
 .bili-touch-hud {
   position: absolute;
-  top: 50%;
+  top: 16px;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.92);
-  min-width: 140px;
-  max-width: 280px;
-  padding: 12px 20px;
-  /* High transparency so video behind remains clearly visible */
-  background: rgba(12, 12, 18, 0.42);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  transform: translate(-50%, -8px) scale(0.96);
+  min-width: 110px;
+  max-width: 300px;
+  padding: 6px 16px;
+  /* Ultra-high transparency so video behind remains fully visible and unblocked */
+  background: rgba(12, 12, 18, 0.28);
+  backdrop-filter: blur(8px) saturate(130%);
+  -webkit-backdrop-filter: blur(8px) saturate(130%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
-  color: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  color: rgba(255, 255, 255, 0.90);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   text-align: center;
   z-index: 999999;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.16s cubic-bezier(0.2, 0, 0, 1), transform 0.16s cubic-bezier(0.2, 0, 0, 1), visibility 0.16s;
+  transition: opacity 0.18s cubic-bezier(0.2, 0, 0, 1), transform 0.18s cubic-bezier(0.2, 0, 0, 1), visibility 0.18s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
 }
 
 .bili-touch-hud.bili-touch-hud-visible {
-  opacity: 0.92;
+  opacity: 0.85;
   visibility: visible;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, 0) scale(1);
 }
 
-/* Top Icon & Title */
-.bili-touch-hud-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 6px;
-}
-
-.bili-touch-hud-icon {
-  width: 28px;
-  height: 28px;
-  fill: #FB7299;
-  filter: drop-shadow(0 2px 6px rgba(251, 114, 153, 0.35));
-}
-
-.bili-touch-hud-title {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  margin-bottom: 2px;
+/* Header row (Icon + Title) */
+.bili-touch-hud-header {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
 }
 
-.bili-touch-hud-delta {
+.bili-touch-hud-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bili-touch-hud-icon {
+  width: 18px;
+  height: 18px;
+  fill: #FB7299;
+  filter: drop-shadow(0 1px 4px rgba(251, 114, 153, 0.3));
+}
+
+.bili-touch-hud-title {
   font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.bili-touch-hud-delta {
+  font-size: 12px;
   font-weight: 700;
   color: #FB7299;
 }
 
 .bili-touch-hud-time {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.70);
   font-variant-numeric: tabular-nums;
-  margin-bottom: 8px;
+  margin-top: 1px;
+  margin-bottom: 2px;
 }
 
 /* Progress bar inside HUD */
 .bili-touch-hud-bar-bg {
   width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.18);
+  min-width: 100px;
+  max-width: 160px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
+  margin-top: 2px;
 }
 
 .bili-touch-hud-bar-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, rgba(255, 102, 153, 0.9) 0%, rgba(251, 114, 153, 0.9) 100%);
+  background: linear-gradient(90deg, rgba(255, 102, 153, 0.85) 0%, rgba(251, 114, 153, 0.85) 100%);
   border-radius: 2px;
   transition: width 0.08s ease-out;
-  box-shadow: 0 0 6px rgba(251, 114, 153, 0.4);
+  box-shadow: 0 0 4px rgba(251, 114, 153, 0.35);
 }
 
-/* Special styling for Long Press Speed HUD (Ultra-subtle, minimal pill badge) */
+/* Special styling for Long Press Speed HUD (Ultra-subtle, top minimal pill badge) */
 .bili-touch-hud-rate {
   min-width: auto;
-  max-width: 140px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 10, 15, 0.32);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  max-width: 120px;
+  padding: 4px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(10, 10, 15, 0.22);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
   transition: opacity 0.35s cubic-bezier(0.2, 0, 0, 1), transform 0.35s cubic-bezier(0.2, 0, 0, 1), visibility 0.35s;
 }
 
 .bili-touch-hud-rate .bili-touch-hud-title {
   color: rgba(255, 255, 255, 0.85);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  margin-bottom: 0;
 }
 
 .bili-touch-hud-rate-badge {
@@ -156,12 +170,12 @@
 
 .bili-touch-ripple {
   position: absolute;
-  width: 50px;
-  height: 50px;
-  margin-top: -25px;
-  margin-left: -25px;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  margin-left: -22px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 114, 153, 0.35) 0%, rgba(251, 114, 153, 0) 70%);
+  background: radial-gradient(circle, rgba(251, 114, 153, 0.30) 0%, rgba(251, 114, 153, 0) 70%);
   pointer-events: none;
   z-index: 999998;
   animation: bili-touch-ripple-anim 0.35s ease-out forwards;
@@ -170,10 +184,10 @@
 @keyframes bili-touch-ripple-anim {
   0% {
     transform: scale(0.3);
-    opacity: 0.8;
+    opacity: 0.7;
   }
   100% {
-    transform: scale(1.8);
+    transform: scale(1.6);
     opacity: 0;
   }
 }

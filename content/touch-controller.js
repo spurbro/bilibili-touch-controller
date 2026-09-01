@@ -142,8 +142,10 @@
       this.hud = document.createElement('div');
       this.hud.className = 'bili-touch-hud';
       this.hud.innerHTML = `
-        <div class="bili-touch-hud-icon-wrap" id="bili-hud-icon"></div>
-        <div class="bili-touch-hud-title" id="bili-hud-title"></div>
+        <div class="bili-touch-hud-header">
+          <div class="bili-touch-hud-icon-wrap" id="bili-hud-icon"></div>
+          <div class="bili-touch-hud-title" id="bili-hud-title"></div>
+        </div>
         <div class="bili-touch-hud-time" id="bili-hud-time"></div>
         <div class="bili-touch-hud-bar-bg" id="bili-hud-bar-bg">
           <div class="bili-touch-hud-bar-fill" id="bili-hud-bar-fill"></div>
