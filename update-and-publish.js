@@ -135,13 +135,17 @@ async function main() {
               'Accept': 'application/vnd.github.v3+json'
             }
           });
+          await new Promise(r => setTimeout(r, 1500));
         }
       }
     }
 
+    console.log('Uploading updated asset...');
     const uploadRes = await uploadAsset(release.upload_url, zipFilePath);
     if (uploadRes.status === 201) {
       console.log(`✓ Release asset refreshed: ${uploadRes.data.browser_download_url}`);
+    } else {
+      console.log(`Asset upload status: ${uploadRes.status}`, uploadRes.data || uploadRes.raw);
     }
   }
 
