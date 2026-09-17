@@ -165,8 +165,17 @@
     }
 
     loadVideoshotData() {
-      const match = window.location.pathname.match(/\/video\/(BV[a-zA-Z0-9]+)/i);
-      const bvid = match ? match[1] : null;
+      let bvid = null;
+      const pathMatch = window.location.pathname.match(/\/video\/(BV[a-zA-Z0-9]+)/i);
+      if (pathMatch) {
+        bvid = pathMatch[1];
+      } else {
+        const searchMatch = window.location.search.match(/bvid=(BV[a-zA-Z0-9]+)/i);
+        if (searchMatch) bvid = searchMatch[1];
+      }
+      if (!bvid && window.__INITIAL_STATE__ && window.__INITIAL_STATE__.bvid) {
+        bvid = window.__INITIAL_STATE__.bvid;
+      }
       if (!bvid) return;
       if (this.cachedBvid === bvid && this.videoshotData) return;
 
@@ -177,6 +186,16 @@
         .then((res) => {
           if (res && res.code === 0 && res.data && res.data.image && res.data.image.length > 0) {
             this.videoshotData = res.data;
+            // Warm browser image cache with sprite sheets so touch scrubbing is instantaneous
+            if (Array.isArray(res.data.image)) {
+              res.data.image.forEach((imgUrl) => {
+                if (imgUrl) {
+                  const fullUrl = imgUrl.startsWith('//') ? 'https:' + imgUrl : imgUrl;
+                  const preload = new Image();
+                  preload.src = fullUrl;
+                }
+              });
+            }
           }
         })
         .catch(() => {});
@@ -186,6 +205,27 @@
       if (!config.enableSeekPreview || duration <= 0) return null;
       const ratio = Math.max(0, Math.min(1, targetTime / duration));
 
+      // 1. Determine video aspect ratio & compute target preview container box dimensions
+      let aspect = 16 / 9;
+      if (this.video && this.video.videoWidth && this.video.videoHeight && this.video.videoHeight > 0) {
+        aspect = this.video.videoWidth / this.video.videoHeight;
+      } else if (this.videoshotData && this.videoshotData.img_x_size && this.videoshotData.img_y_size && this.videoshotData.img_y_size > 0) {
+        aspect = this.videoshotData.img_x_size / this.videoshotData.img_y_size;
+      }
+
+      let boxW = 160;
+      let boxH = 90;
+      if (aspect >= 1) {
+        // Landscape video (16:9, 4:3, 21:9 etc.)
+        boxW = 160;
+        boxH = Math.max(54, Math.min(120, Math.round(160 / aspect)));
+      } else {
+        // Portrait / Vertical video (9:16 etc.)
+        boxH = 120;
+        boxW = Math.max(54, Math.min(120, Math.round(120 * aspect)));
+      }
+
+      // 2. Primary Channel: Synthesize mousemove on native progress bar to activate Bilibili's videoshot engine
       const progressArea =
         this.container.querySelector('.bpx-player-progress-area') ||
         this.container.querySelector('.bpx-player-progress-wrap') ||
@@ -193,8 +233,6 @@
         document.querySelector('.bpx-player-progress-area') ||
         document.querySelector('.bpx-player-progress-wrap') ||
         document.querySelector('.bilibili-player-video-progress');
-
-      let previewStyle = null;
 
       if (progressArea) {
         const rect = progressArea.getBoundingClientRect();
@@ -212,35 +250,109 @@
             })
           );
         }
+      }
 
-        const nativeImg =
-          document.querySelector('.bpx-player-progress-preview-image') ||
-          document.querySelector('.bpx-player-progress-preview div[class*="image"]') ||
-          document.querySelector('.bilibili-player-video-progress-preview div[class*="image"]');
+      let previewStyle = null;
 
-        if (nativeImg && nativeImg.style.backgroundImage && nativeImg.style.backgroundImage !== 'none') {
-          previewStyle = {
-            backgroundImage: nativeImg.style.backgroundImage,
-            backgroundPosition: nativeImg.style.backgroundPosition || '0 0',
-            backgroundSize: nativeImg.style.backgroundSize || '1600px 900px'
-          };
+      // 3. Inspect native progress preview image element
+      const nativeImg =
+        document.querySelector('.bpx-player-progress-preview-image') ||
+        document.querySelector('.bpx-player-progress-preview img') ||
+        document.querySelector('.bpx-player-progress-preview div[class*="image"]') ||
+        document.querySelector('.bilibili-player-video-progress-preview div[class*="image"]') ||
+        document.querySelector('.bilibili-player-video-progress-preview img');
+
+      if (nativeImg) {
+        // 3a. Native <img> element with cropped frame dataURL or image src (Modern Bilibili player)
+        const src = nativeImg.currentSrc || nativeImg.src || (nativeImg.getAttribute && nativeImg.getAttribute('src'));
+        if (src && typeof src === 'string' && src !== 'about:blank' && src !== 'none' && !src.endsWith('/none')) {
+          const isValid = src.startsWith('data:image/') ? src.length > 80 : (src.startsWith('http') || src.startsWith('//') || src.startsWith('blob:'));
+          if (isValid) {
+            previewStyle = {
+              type: 'single',
+              boxW,
+              boxH,
+              backgroundImage: `url("${src}")`,
+              backgroundPosition: 'center center',
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat'
+            };
+          }
+        }
+
+        // 3b. Native CSS Sprite style (Older Bilibili player versions)
+        if (!previewStyle) {
+          const styleBg = nativeImg.style.backgroundImage;
+          if (styleBg && styleBg !== 'none') {
+            const urlMatch = styleBg.match(/url\(["']?([^"']+)["']?\)/i);
+            if (urlMatch) {
+              const bgUrl = urlMatch[1];
+              const bgPos = nativeImg.style.backgroundPosition || '0 0';
+              const posMatch = bgPos.match(/(-?\d+(?:\.\d+)?)(px|%)\s+(-?\d+(?:\.\d+)?)(px|%)/);
+              if (posMatch) {
+                const posX = parseFloat(posMatch[1]);
+                const posY = parseFloat(posMatch[3]);
+                const nativeW = nativeImg.offsetWidth || (this.videoshotData && this.videoshotData.img_x_size) || 160;
+                const nativeH = nativeImg.offsetHeight || (this.videoshotData && this.videoshotData.img_y_size) || 90;
+
+                if (Math.abs(posX) < 1 && Math.abs(posY) < 1) {
+                  // Single frame at origin
+                  previewStyle = {
+                    type: 'single',
+                    boxW,
+                    boxH,
+                    backgroundImage: `url("${bgUrl}")`,
+                    backgroundPosition: 'center center',
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat'
+                  };
+                } else if (nativeW > 0 && nativeH > 0) {
+                  // Sprite sheet: scale native frame coordinates proportionally to our HUD container
+                  const col = Math.round(Math.abs(posX) / nativeW);
+                  const row = Math.round(Math.abs(posY) / nativeH);
+                  const cols = (this.videoshotData && this.videoshotData.img_x_len) || 10;
+                  const rows = (this.videoshotData && this.videoshotData.img_y_len) || 10;
+
+                  previewStyle = {
+                    type: 'sprite',
+                    boxW,
+                    boxH,
+                    backgroundImage: `url("${bgUrl}")`,
+                    backgroundPosition: `-${col * boxW}px -${row * boxH}px`,
+                    backgroundSize: `${cols * boxW}px ${rows * boxH}px`,
+                    backgroundRepeat: 'no-repeat'
+                  };
+                }
+              }
+            }
+          }
         }
       }
 
-      // Fallback: Autonomous videoshot computation
-      if (!previewStyle && this.videoshotData && this.videoshotData.image && this.videoshotData.image.length > 0) {
+      // 4. Fallback Channel: Autonomous mathematical Videoshot sprite sheet computation
+      if (!previewStyle && this.videoshotData && Array.isArray(this.videoshotData.image) && this.videoshotData.image.length > 0) {
         const vs = this.videoshotData;
         const totalImages = vs.image.length;
         const cols = vs.img_x_len || 10;
         const rows = vs.img_y_len || 10;
         const framesPerSheet = cols * rows;
-        const frameWidth = vs.img_x_size || 160;
-        const frameHeight = vs.img_y_size || 90;
 
-        const totalFrames = totalImages * framesPerSheet;
-        const frameIndex = Math.min(totalFrames - 1, Math.max(0, Math.floor(ratio * totalFrames)));
+        let frameIndex = 0;
+        if (Array.isArray(vs.index) && vs.index.length > 1) {
+          let idx = 0;
+          for (let n = 0; n < vs.index.length - 1; n++) {
+            if (targetTime >= vs.index[n] && targetTime < vs.index[n + 1]) {
+              idx = n;
+              break;
+            }
+          }
+          frameIndex = idx;
+        } else {
+          const totalFrames = totalImages * framesPerSheet;
+          frameIndex = Math.min(totalFrames - 1, Math.max(0, Math.floor(ratio * totalFrames)));
+        }
 
-        const sheetIndex = Math.floor(frameIndex / framesPerSheet);
+        const sheetIndex = Math.min(totalImages - 1, Math.floor(frameIndex / framesPerSheet));
         const innerFrame = frameIndex % framesPerSheet;
         const col = innerFrame % cols;
         const row = Math.floor(innerFrame / cols);
@@ -248,10 +360,15 @@
         let imgUrl = vs.image[sheetIndex];
         if (imgUrl && imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
 
+        // Ensure sprite sheet and frame position are perfectly scaled to boxW and boxH
         previewStyle = {
+          type: 'sprite',
+          boxW,
+          boxH,
           backgroundImage: `url("${imgUrl}")`,
-          backgroundPosition: `-${col * frameWidth}px -${row * frameHeight}px`,
-          backgroundSize: `${cols * frameWidth}px ${rows * frameHeight}px`
+          backgroundPosition: `-${col * boxW}px -${row * boxH}px`,
+          backgroundSize: `${cols * boxW}px ${rows * boxH}px`,
+          backgroundRepeat: 'no-repeat'
         };
       }
 
@@ -292,19 +409,28 @@
 
       if (options.showPreview && options.previewStyle) {
         this.hud.classList.add('bili-touch-hud-seeking');
-        previewWrap.style.display = 'block';
-        if (options.previewStyle.backgroundImage) {
-          previewImg.style.backgroundImage = options.previewStyle.backgroundImage;
-        }
-        if (options.previewStyle.backgroundPosition) {
-          previewImg.style.backgroundPosition = options.previewStyle.backgroundPosition;
-        }
-        if (options.previewStyle.backgroundSize) {
-          previewImg.style.backgroundSize = options.previewStyle.backgroundSize;
+        if (previewWrap) {
+          previewWrap.style.display = 'block';
+          const style = options.previewStyle;
+          const boxW = style.boxW || 160;
+          const boxH = style.boxH || 90;
+
+          previewWrap.style.width = `${boxW}px`;
+          previewWrap.style.height = `${boxH}px`;
+
+          if (previewImg) {
+            previewImg.style.width = `${boxW}px`;
+            previewImg.style.height = `${boxH}px`;
+            previewImg.style.backgroundImage = style.backgroundImage || 'none';
+            previewImg.style.backgroundPosition = style.backgroundPosition || 'center center';
+            previewImg.style.backgroundSize = style.backgroundSize || 'contain';
+            previewImg.style.backgroundRepeat = 'no-repeat';
+          }
         }
       } else {
         this.hud.classList.remove('bili-touch-hud-seeking');
-        previewWrap.style.display = 'none';
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (previewImg) previewImg.style.backgroundImage = 'none';
       }
 
       if (options.icon !== undefined) {
@@ -344,6 +470,7 @@
           this.hud.classList.remove('bili-touch-hud-visible');
           this.hud.classList.remove('bili-touch-hud-seeking');
           if (previewWrap) previewWrap.style.display = 'none';
+          if (previewImg) previewImg.style.backgroundImage = 'none';
         }, delay);
       }
     }
@@ -353,6 +480,10 @@
       if (this.hud) {
         this.hud.classList.remove('bili-touch-hud-visible');
         this.hud.classList.remove('bili-touch-hud-seeking');
+        const previewWrap = this.hud.querySelector('#bili-hud-preview-wrap');
+        const previewImg = this.hud.querySelector('#bili-hud-preview-img');
+        if (previewWrap) previewWrap.style.display = 'none';
+        if (previewImg) previewImg.style.backgroundImage = 'none';
       }
     }
 
