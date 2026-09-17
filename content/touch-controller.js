@@ -116,7 +116,7 @@
 
       // Video frame preview states
       this.videoshotData = null;
-      this.cachedBvid = null;
+      this.cachedCacheKey = null;
       this.lastPreviewStyle = null;
 
       this.init();
@@ -166,6 +166,9 @@
 
     loadVideoshotData() {
       let bvid = null;
+      let cid = null;
+
+      // 1. Extract bvid from URL pathname or search params
       const pathMatch = window.location.pathname.match(/\/video\/(BV[a-zA-Z0-9]+)/i);
       if (pathMatch) {
         bvid = pathMatch[1];
@@ -173,19 +176,49 @@
         const searchMatch = window.location.search.match(/bvid=(BV[a-zA-Z0-9]+)/i);
         if (searchMatch) bvid = searchMatch[1];
       }
-      if (!bvid && window.__INITIAL_STATE__ && window.__INITIAL_STATE__.bvid) {
-        bvid = window.__INITIAL_STATE__.bvid;
-      }
-      if (!bvid) return;
-      if (this.cachedBvid === bvid && this.videoshotData) return;
 
-      this.cachedBvid = bvid;
-      const apiUrl = `https://api.bilibili.com/x/player/videoshot?bvid=${encodeURIComponent(bvid)}`;
+      // 2. Extract from window globals (standard Bilibili & Bangumi SSR state)
+      if (typeof window !== 'undefined') {
+        const state = window.__INITIAL_STATE__;
+        if (state) {
+          if (!bvid) {
+            bvid = state.bvid || (state.videoData && state.videoData.bvid) || (state.epInfo && state.epInfo.bvid);
+          }
+          cid = state.cid || (state.videoData && state.videoData.cid) || (state.epInfo && state.epInfo.cid);
+        }
+      }
+
+      // 3. Fallback: Check canonical / meta tags for bvid
+      if (!bvid) {
+        const canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical && canonical.href) {
+          const m = canonical.href.match(/video\/(BV[a-zA-Z0-9]+)/i);
+          if (m) bvid = m[1];
+        }
+      }
+
+      // 4. Check cid from URL if not already detected
+      if (!cid) {
+        const cidMatch = window.location.search.match(/cid=(\d+)/i);
+        if (cidMatch) cid = cidMatch[1];
+      }
+
+      if (!bvid && !cid) return;
+
+      const cacheKey = `${bvid || ''}_${cid || ''}`;
+      if (this.cachedCacheKey === cacheKey && this.videoshotData) return;
+      this.cachedCacheKey = cacheKey;
+
+      let apiUrl = 'https://api.bilibili.com/x/player/videoshot?';
+      if (bvid) apiUrl += `bvid=${encodeURIComponent(bvid)}`;
+      if (cid) apiUrl += `${bvid ? '&' : ''}cid=${encodeURIComponent(cid)}`;
+
       fetch(apiUrl, { credentials: 'omit' })
         .then((r) => r.json())
         .then((res) => {
           if (res && res.code === 0 && res.data && res.data.image && res.data.image.length > 0) {
             this.videoshotData = res.data;
+
             // Warm browser image cache with sprite sheets so touch scrubbing is instantaneous
             if (Array.isArray(res.data.image)) {
               res.data.image.forEach((imgUrl) => {
@@ -196,6 +229,24 @@
                 }
               });
             }
+
+            // Fetch and parse binary pvdata time index if present
+            if (res.data.pvdata) {
+              const pvUrl = res.data.pvdata.startsWith('//') ? 'https:' + res.data.pvdata : res.data.pvdata;
+              fetch(pvUrl, { credentials: 'omit' })
+                .then((pr) => pr.arrayBuffer())
+                .then((buf) => {
+                  const view = new DataView(buf);
+                  const times = [];
+                  for (let i = 0; i < view.byteLength; i += 2) {
+                    times.push(view.getUint16(i, false));
+                  }
+                  if (this.videoshotData && times.length > 0) {
+                    this.videoshotData.timeIndex = times;
+                  }
+                })
+                .catch(() => {});
+            }
           }
         })
         .catch(() => {});
@@ -205,12 +256,12 @@
       if (!config.enableSeekPreview || duration <= 0) return null;
       const ratio = Math.max(0, Math.min(1, targetTime / duration));
 
-      // 1. Determine video aspect ratio & compute target preview container box dimensions
+      // 1. Determine keyframe aspect ratio & compute target preview container box dimensions
       let aspect = 16 / 9;
-      if (this.video && this.video.videoWidth && this.video.videoHeight && this.video.videoHeight > 0) {
-        aspect = this.video.videoWidth / this.video.videoHeight;
-      } else if (this.videoshotData && this.videoshotData.img_x_size && this.videoshotData.img_y_size && this.videoshotData.img_y_size > 0) {
+      if (this.videoshotData && this.videoshotData.img_x_size && this.videoshotData.img_y_size && this.videoshotData.img_y_size > 0) {
         aspect = this.videoshotData.img_x_size / this.videoshotData.img_y_size;
+      } else if (this.video && this.video.videoWidth && this.video.videoHeight && this.video.videoHeight > 0) {
+        aspect = this.video.videoWidth / this.video.videoHeight;
       }
 
       let boxW = 160;
@@ -218,119 +269,17 @@
       if (aspect >= 1) {
         // Landscape video (16:9, 4:3, 21:9 etc.)
         boxW = 160;
-        boxH = Math.max(54, Math.min(120, Math.round(160 / aspect)));
+        boxH = Math.max(54, Math.min(110, Math.round(160 / aspect)));
       } else {
         // Portrait / Vertical video (9:16 etc.)
-        boxH = 120;
-        boxW = Math.max(54, Math.min(120, Math.round(120 * aspect)));
-      }
-
-      // 2. Primary Channel: Synthesize mousemove on native progress bar to activate Bilibili's videoshot engine
-      const progressArea =
-        this.container.querySelector('.bpx-player-progress-area') ||
-        this.container.querySelector('.bpx-player-progress-wrap') ||
-        this.container.querySelector('.bpx-player-progress') ||
-        document.querySelector('.bpx-player-progress-area') ||
-        document.querySelector('.bpx-player-progress-wrap') ||
-        document.querySelector('.bilibili-player-video-progress');
-
-      if (progressArea) {
-        const rect = progressArea.getBoundingClientRect();
-        if (rect.width > 0) {
-          const clientX = rect.left + ratio * rect.width;
-          const clientY = rect.top + rect.height / 2;
-
-          progressArea.dispatchEvent(
-            new MouseEvent('mousemove', {
-              clientX,
-              clientY,
-              bubbles: true,
-              cancelable: true,
-              view: window
-            })
-          );
-        }
+        boxH = 110;
+        boxW = Math.max(54, Math.min(110, Math.round(110 * aspect)));
       }
 
       let previewStyle = null;
 
-      // 3. Inspect native progress preview image element
-      const nativeImg =
-        document.querySelector('.bpx-player-progress-preview-image') ||
-        document.querySelector('.bpx-player-progress-preview img') ||
-        document.querySelector('.bpx-player-progress-preview div[class*="image"]') ||
-        document.querySelector('.bilibili-player-video-progress-preview div[class*="image"]') ||
-        document.querySelector('.bilibili-player-video-progress-preview img');
-
-      if (nativeImg) {
-        // 3a. Native <img> element with cropped frame dataURL or image src (Modern Bilibili player)
-        const src = nativeImg.currentSrc || nativeImg.src || (nativeImg.getAttribute && nativeImg.getAttribute('src'));
-        if (src && typeof src === 'string' && src !== 'about:blank' && src !== 'none' && !src.endsWith('/none')) {
-          const isValid = src.startsWith('data:image/') ? src.length > 80 : (src.startsWith('http') || src.startsWith('//') || src.startsWith('blob:'));
-          if (isValid) {
-            previewStyle = {
-              type: 'single',
-              boxW,
-              boxH,
-              backgroundImage: `url("${src}")`,
-              backgroundPosition: 'center center',
-              backgroundSize: 'contain',
-              backgroundRepeat: 'no-repeat'
-            };
-          }
-        }
-
-        // 3b. Native CSS Sprite style (Older Bilibili player versions)
-        if (!previewStyle) {
-          const styleBg = nativeImg.style.backgroundImage;
-          if (styleBg && styleBg !== 'none') {
-            const urlMatch = styleBg.match(/url\(["']?([^"']+)["']?\)/i);
-            if (urlMatch) {
-              const bgUrl = urlMatch[1];
-              const bgPos = nativeImg.style.backgroundPosition || '0 0';
-              const posMatch = bgPos.match(/(-?\d+(?:\.\d+)?)(px|%)\s+(-?\d+(?:\.\d+)?)(px|%)/);
-              if (posMatch) {
-                const posX = parseFloat(posMatch[1]);
-                const posY = parseFloat(posMatch[3]);
-                const nativeW = nativeImg.offsetWidth || (this.videoshotData && this.videoshotData.img_x_size) || 160;
-                const nativeH = nativeImg.offsetHeight || (this.videoshotData && this.videoshotData.img_y_size) || 90;
-
-                if (Math.abs(posX) < 1 && Math.abs(posY) < 1) {
-                  // Single frame at origin
-                  previewStyle = {
-                    type: 'single',
-                    boxW,
-                    boxH,
-                    backgroundImage: `url("${bgUrl}")`,
-                    backgroundPosition: 'center center',
-                    backgroundSize: 'contain',
-                    backgroundRepeat: 'no-repeat'
-                  };
-                } else if (nativeW > 0 && nativeH > 0) {
-                  // Sprite sheet: scale native frame coordinates proportionally to our HUD container
-                  const col = Math.round(Math.abs(posX) / nativeW);
-                  const row = Math.round(Math.abs(posY) / nativeH);
-                  const cols = (this.videoshotData && this.videoshotData.img_x_len) || 10;
-                  const rows = (this.videoshotData && this.videoshotData.img_y_len) || 10;
-
-                  previewStyle = {
-                    type: 'sprite',
-                    boxW,
-                    boxH,
-                    backgroundImage: `url("${bgUrl}")`,
-                    backgroundPosition: `-${col * boxW}px -${row * boxH}px`,
-                    backgroundSize: `${cols * boxW}px ${rows * boxH}px`,
-                    backgroundRepeat: 'no-repeat'
-                  };
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // 4. Fallback Channel: Autonomous mathematical Videoshot sprite sheet computation
-      if (!previewStyle && this.videoshotData && Array.isArray(this.videoshotData.image) && this.videoshotData.image.length > 0) {
+      // 2. Primary Channel: Autonomous mathematical Videoshot sprite sheet computation
+      if (this.videoshotData && Array.isArray(this.videoshotData.image) && this.videoshotData.image.length > 0) {
         const vs = this.videoshotData;
         const totalImages = vs.image.length;
         const cols = vs.img_x_len || 10;
@@ -338,21 +287,53 @@
         const framesPerSheet = cols * rows;
 
         let frameIndex = 0;
-        if (Array.isArray(vs.index) && vs.index.length > 1) {
-          let idx = 0;
-          for (let n = 0; n < vs.index.length - 1; n++) {
-            if (targetTime >= vs.index[n] && targetTime < vs.index[n + 1]) {
-              idx = n;
-              break;
+        if (Array.isArray(vs.timeIndex) && vs.timeIndex.length > 0) {
+          // Precise binary search in parsed pvdata timestamps
+          const times = vs.timeIndex;
+          let low = 0;
+          let high = times.length - 1;
+          if (targetTime <= times[0]) {
+            frameIndex = 0;
+          } else if (targetTime >= times[high]) {
+            frameIndex = high;
+          } else {
+            while (low <= high) {
+              const mid = (low + high) >> 1;
+              if (times[mid] <= targetTime) {
+                low = mid + 1;
+              } else {
+                high = mid - 1;
+              }
             }
+            frameIndex = Math.max(0, high);
           }
-          frameIndex = idx;
+        } else if (Array.isArray(vs.index) && vs.index.length > 1) {
+          // Binary search in vs.index timestamps
+          const times = vs.index;
+          let low = 0;
+          let high = times.length - 1;
+          if (targetTime <= times[0]) {
+            frameIndex = 0;
+          } else if (targetTime >= times[high]) {
+            frameIndex = high;
+          } else {
+            while (low <= high) {
+              const mid = (low + high) >> 1;
+              if (times[mid] <= targetTime) {
+                low = mid + 1;
+              } else {
+                high = mid - 1;
+              }
+            }
+            frameIndex = Math.max(0, high);
+          }
         } else {
+          // Fallback: proportional mapping across total available frames
           const totalFrames = totalImages * framesPerSheet;
           frameIndex = Math.min(totalFrames - 1, Math.max(0, Math.floor(ratio * totalFrames)));
         }
 
-        const sheetIndex = Math.min(totalImages - 1, Math.floor(frameIndex / framesPerSheet));
+        const sheetIndex = Math.min(totalImages - 1, Math.max(0, Math.floor(frameIndex / framesPerSheet)));
         const innerFrame = frameIndex % framesPerSheet;
         const col = innerFrame % cols;
         const row = Math.floor(innerFrame / cols);
@@ -360,7 +341,8 @@
         let imgUrl = vs.image[sheetIndex];
         if (imgUrl && imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
 
-        // Ensure sprite sheet and frame position are perfectly scaled to boxW and boxH
+        // Scale entire sprite sheet to (cols * boxW) x (rows * boxH)
+        // Offset to exactly (-col * boxW, -row * boxH) so the current keyframe fills boxW x boxH
         previewStyle = {
           type: 'sprite',
           boxW,
@@ -370,6 +352,101 @@
           backgroundSize: `${cols * boxW}px ${rows * boxH}px`,
           backgroundRepeat: 'no-repeat'
         };
+      }
+
+      // 3. Secondary Channel: Inspect native progress preview image element (Fallback if videoshot API not ready)
+      if (!previewStyle) {
+        // Dispatch synthetic hover event on native progress bar
+        const progressArea =
+          this.container.querySelector('.bpx-player-progress-area') ||
+          this.container.querySelector('.bpx-player-progress-wrap') ||
+          this.container.querySelector('.bpx-player-progress') ||
+          document.querySelector('.bpx-player-progress-area') ||
+          document.querySelector('.bpx-player-progress-wrap') ||
+          document.querySelector('.bilibili-player-video-progress');
+
+        if (progressArea) {
+          const rect = progressArea.getBoundingClientRect();
+          if (rect.width > 0) {
+            const clientX = rect.left + ratio * rect.width;
+            const clientY = rect.top + rect.height / 2;
+            try {
+              progressArea.dispatchEvent(
+                new MouseEvent('mousemove', {
+                  clientX,
+                  clientY,
+                  bubbles: true,
+                  cancelable: true,
+                  view: window
+                })
+              );
+            } catch (e) {}
+          }
+        }
+
+        const nativeImg =
+          document.querySelector('.bpx-player-progress-preview-image') ||
+          document.querySelector('.bpx-player-progress-preview div[class*="image"]') ||
+          document.querySelector('.bilibili-player-video-progress-preview div[class*="image"]') ||
+          document.querySelector('.bpx-player-progress-preview img') ||
+          document.querySelector('.bilibili-player-video-progress-preview img');
+
+        if (nativeImg) {
+          const compStyle = window.getComputedStyle(nativeImg);
+          const bgImg = nativeImg.style.backgroundImage || compStyle.backgroundImage;
+
+          if (bgImg && bgImg !== 'none') {
+            const urlMatch = bgImg.match(/url\(["']?([^"']+)["']?\)/i);
+            if (urlMatch) {
+              const bgUrl = urlMatch[1];
+              const bgPos = nativeImg.style.backgroundPosition || compStyle.backgroundPosition || '0px 0px';
+              const posMatch = bgPos.match(/(-?\d+(?:\.\d+)?)(px|%)\s+(-?\d+(?:\.\d+)?)(px|%)/);
+
+              const nativeW = nativeImg.offsetWidth || parseFloat(compStyle.width) || (this.videoshotData && this.videoshotData.img_x_size) || 160;
+              const nativeH = nativeImg.offsetHeight || parseFloat(compStyle.height) || (this.videoshotData && this.videoshotData.img_y_size) || 90;
+
+              const bgSize = nativeImg.style.backgroundSize || compStyle.backgroundSize || '';
+              const sizeMatch = bgSize.match(/(\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px/);
+
+              let cols = (this.videoshotData && this.videoshotData.img_x_len) || 10;
+              let rows = (this.videoshotData && this.videoshotData.img_y_len) || 10;
+              if (sizeMatch && nativeW > 0 && nativeH > 0) {
+                cols = Math.max(1, Math.round(parseFloat(sizeMatch[1]) / nativeW));
+                rows = Math.max(1, Math.round(parseFloat(sizeMatch[2]) / nativeH));
+              }
+
+              if (posMatch && nativeW > 0 && nativeH > 0) {
+                const posX = parseFloat(posMatch[1]);
+                const posY = parseFloat(posMatch[3]);
+                const col = Math.round(Math.abs(posX) / nativeW);
+                const row = Math.round(Math.abs(posY) / nativeH);
+
+                previewStyle = {
+                  type: 'sprite',
+                  boxW,
+                  boxH,
+                  backgroundImage: `url("${bgUrl}")`,
+                  backgroundPosition: `-${col * boxW}px -${row * boxH}px`,
+                  backgroundSize: `${cols * boxW}px ${rows * boxH}px`,
+                  backgroundRepeat: 'no-repeat'
+                };
+              }
+            }
+          } else if (nativeImg.tagName && nativeImg.tagName.toLowerCase() === 'img') {
+            const src = nativeImg.currentSrc || nativeImg.src || nativeImg.getAttribute('src');
+            if (src && typeof src === 'string' && src.startsWith('data:image/') && src.length > 80) {
+              previewStyle = {
+                type: 'single',
+                boxW,
+                boxH,
+                backgroundImage: `url("${src}")`,
+                backgroundPosition: 'center center',
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat'
+              };
+            }
+          }
+        }
       }
 
       return previewStyle;
@@ -422,7 +499,7 @@
             previewImg.style.width = `${boxW}px`;
             previewImg.style.height = `${boxH}px`;
             previewImg.style.backgroundImage = style.backgroundImage || 'none';
-            previewImg.style.backgroundPosition = style.backgroundPosition || 'center center';
+            previewImg.style.backgroundPosition = style.backgroundPosition || '0px 0px';
             previewImg.style.backgroundSize = style.backgroundSize || 'contain';
             previewImg.style.backgroundRepeat = 'no-repeat';
           }

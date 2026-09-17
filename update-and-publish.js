@@ -97,7 +97,7 @@ async function main() {
 
   try {
     execSync(`"${gitExe}" add .`, { stdio: 'pipe' });
-    execSync(`"${gitExe}" commit -m "fix: Fix keyframe thumbnail display scaling and aspect ratio adaptation in HUD preview"`, { stdio: 'pipe' });
+    execSync(`"${gitExe}" commit -m "fix: Fix keyframe thumbnail scaling, aspect-ratio viewport projection and binary time indexing"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${pushUrl}"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" push origin main`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${publicUrl}"`, { stdio: 'pipe' });

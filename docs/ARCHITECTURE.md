@@ -111,25 +111,28 @@ $$t_{\text{target}} = \text{clamp}(0, D, t_{\text{start}} + \Delta t)$$
 3. **合成鼠标点击拦截**：
    设定 `suppressClickUntil` 门限，彻底吞噬手势抬手后产生的合成 `click` 与 `dblclick` 事件。
 
-### 3.4 视频帧截图与雪碧图实时寻址与动态缩放算法 (Video Frame Sprite Preview & Aspect Ratio Adaptation)
-为了在触控快速滑动时实现 60 FPS 零卡顿的高清视频关键帧预览，插件创新采用了**双轨关键帧寻址与动态等比缩放架构**，彻底解决了预览尺寸变形或仅显局部一角的适配难题：
+### 3.4 视频关键帧截图与雪碧图实时寻址与动态缩放算法 (Video Frame Sprite Preview & Aspect Ratio Adaptation)
+为了在触控快速滑动快进/快退（Seek）时实现 60 FPS 丝滑的高清关键帧预览，插件采用了**自主雪碧图投影引擎为主、原生进度条反射为辅的双通道架构**，彻底解决了关键帧预览尺寸变形或仅显示局部一角的适配难题：
 
-1. **视频宽高比动态感知与 HUD 容器自适应**：
-   - 自动获取当前视频真实几何比例（`videoWidth / videoHeight`，兼容横屏 16:9、4:3、宽荧幕 21:9 以及竖屏短视频 9:16 等各类画幅规格）；
-   - 动态计算并赋予 HUD 预览视口 `boxW` 与 `boxH`（横屏锁定宽 160px，高度动态缩放；竖屏锁定高 120px，宽度动态缩放），杜绝固定宽高引起的变形与黑边。
+1. **关键帧画幅动态感知与 HUD 视口自适应**：
+   - 优先读取官方 Videoshot 关键帧的真实几何尺寸比例（`img_x_size / img_y_size`），兜底结合 HTML5 Video 固有尺寸（`videoWidth / videoHeight`，兼容 16:9、4:3、21:9 宽画幅及 9:16 竖屏短视频）；
+   - 动态计算并赋予 HUD 预览视口 `boxW` 与 `boxH`（横屏最大 160px，高度按画幅等比压缩，限制在 54px ~ 110px；竖屏最大 110px，宽度按画幅等比缩放），杜绝固定宽高引起的单帧拉伸形变或黑边。
 
-2. **原生进度条事件反射与双重图像捕获（Primary Channel）**：
-   - 滑动过程中向官方播放器进度条分发合成 `mousemove` 事件，触发 B 站 Videoshot 状态机；
-   - **现代 Canvas 裁剪帧提取**：B 站新版播放器采用 Canvas 将雪碧图实时裁切为单帧 base64 dataURL 写入 `<img class="bpx-player-progress-preview-image" src="data:image/jpeg;base64,...">`。插件优先直接捕获该单帧流，配置 `background-size: contain; background-position: center;` 满版完整呈现；
-   - **传统 CSS Sprite 镜像与坐标归一化**：若播放器使用 `backgroundImage` 模式，提取原生帧坐标 $(X_{\text{native}}, Y_{\text{native}})$ 与单帧尺寸，计算归一化行列索引 $(c, r)$，按 HUD 实际视口重新缩放：
+2. **自主 Videoshot 引擎与二进制时间轴微秒寻址（Primary Channel）**：
+   - 深度支持多 P 连播与番剧/电影多集（通过 URL、`__INITIAL_STATE__` 自动捕获 `bvid` 与 `cid`，生成状态缓存键 `${bvid}_${cid}`）；
+   - 异步加载官方关键帧雪碧图（通常 10 列 x 10 行，共 100 帧/图），并利用内存 Image 对象进行预热缓存；
+   - **二进制 `pvdata` 索引解析**：若视频提供二进制 `.bin` 索引文件，插件通过 `DataView` 实时反序列化 16 位大端无符号时间戳数组，并在手势滑动时通过 $O(\log N)$ 二分查找精确定位目标帧，彻底消除线性比例估算在未填满雪碧图尾部出现的黑屏与漂移；
+   - **雪碧图无损等比投影定理**：
+     无论原始雪碧图单帧是 160x90、320x180 还是其他分辨率，整张雪碧图的 CSS `background-size` 统一映射为：
      $$\text{background-size} = (C \times W_{\text{box}})\text{px} \quad (R \times H_{\text{box}})\text{px}$$
+     目标关键帧的视口起始偏移量映射为：
      $$\text{background-position} = (-c \times W_{\text{box}})\text{px} \quad (-r \times H_{\text{box}})\text{px}$$
+     在 HUD 容器中单帧像素与视口尺寸达成 100% 物理贴合，杜绝放大或裁剪。
 
-3. **自主 Videoshot API 备用解析与无损投影定理（Fallback Channel）**：
-   - 当原生 DOM 未就绪时，解析视频 `bvid` 异步获取官方雪碧图（通常 10 列 x 10 行，共 100 帧/张），并预热图片缓存；
-   - 根据时间戳比例或 `index` 数组精确计算雪碧图编号及网格索引 $(c, r)$；
-   - **关键帧投影定理**：无论雪碧图原始单帧是 160x90 还是 320x180，通过将整张雪碧图尺寸映射为 $(C \times W_{\text{box}}, R \times H_{\text{box}})$，并设置偏移量 $(-c \times W_{\text{box}}, -r \times H_{\text{box}})$，单帧像素与视口尺寸完全等比贴合，彻底避免硬编码导致的画面局部放大与截断；
-   - 结合 CSS `image-rendering: -webkit-optimize-contrast` 与 `.bili-touch-seeking`，彻底抑制底部控制栏原生 tooltip 闪烁，保持顶栏纯净高清呈现。
+3. **原生播放器反射与双模式解析（Secondary Channel）**：
+   - 当自主 API 尚未返回时，向原生播放器分发 `mousemove` 激活其内部状态；
+   - **CSS Sprite 镜像重投影**：提取原生帧坐标 $(X_{\text{native}}, Y_{\text{native}})$，利用 `window.getComputedStyle` 提取真实单帧与网格尺寸，进行行列归一化重新投影计算，修复了首帧 $(0, 0)$ 误识别为单图导致拉伸的严重缺陷；
+   - **独立 DataURL 兼容**：若捕获到真实的 base64 裁剪数据流，以单帧无裁切模式完整渲染。
 
 ### 3.5 动态 DOM 监听与 SPA 路由适应
 利用 `MutationObserver` 监控 DOM 树变动，同时配合 URL 历史变更（`popstate`）与周期性健康检查，确保在任何分 P 切换或推荐视频跳转后，手势控制器与雪碧图数据都能在第一时间自动无缝挂载。
