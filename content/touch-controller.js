@@ -9,6 +9,7 @@
   // Default Configuration
   const DEFAULT_CONFIG = {
     enableSeek: true,
+    enableSeekPreview: true,
     seekSensitivity: 90, // seconds per full-width swipe
     enableVolume: true,
     enableBrightness: true,
@@ -113,6 +114,11 @@
       this.suppressClickUntil = 0;
       this.suppressContextMenuUntil = 0;
 
+      // Video frame preview states
+      this.videoshotData = null;
+      this.cachedBvid = null;
+      this.lastPreviewStyle = null;
+
       this.init();
     }
 
@@ -120,6 +126,7 @@
       this.createTouchLayer();
       this.createHUD();
       this.bindEvents();
+      this.loadVideoshotData();
     }
 
     createTouchLayer() {
@@ -142,6 +149,9 @@
       this.hud = document.createElement('div');
       this.hud.className = 'bili-touch-hud';
       this.hud.innerHTML = `
+        <div class="bili-touch-hud-preview-wrap" id="bili-hud-preview-wrap">
+          <div class="bili-touch-hud-preview-img" id="bili-hud-preview-img"></div>
+        </div>
         <div class="bili-touch-hud-header">
           <div class="bili-touch-hud-icon-wrap" id="bili-hud-icon"></div>
           <div class="bili-touch-hud-title" id="bili-hud-title"></div>
@@ -154,15 +164,148 @@
       this.container.appendChild(this.hud);
     }
 
+    loadVideoshotData() {
+      const match = window.location.pathname.match(/\/video\/(BV[a-zA-Z0-9]+)/i);
+      const bvid = match ? match[1] : null;
+      if (!bvid) return;
+      if (this.cachedBvid === bvid && this.videoshotData) return;
+
+      this.cachedBvid = bvid;
+      const apiUrl = `https://api.bilibili.com/x/player/videoshot?bvid=${encodeURIComponent(bvid)}`;
+      fetch(apiUrl, { credentials: 'omit' })
+        .then((r) => r.json())
+        .then((res) => {
+          if (res && res.code === 0 && res.data && res.data.image && res.data.image.length > 0) {
+            this.videoshotData = res.data;
+          }
+        })
+        .catch(() => {});
+    }
+
+    updatePreview(targetTime, duration) {
+      if (!config.enableSeekPreview || duration <= 0) return null;
+      const ratio = Math.max(0, Math.min(1, targetTime / duration));
+
+      const progressArea =
+        this.container.querySelector('.bpx-player-progress-area') ||
+        this.container.querySelector('.bpx-player-progress-wrap') ||
+        this.container.querySelector('.bpx-player-progress') ||
+        document.querySelector('.bpx-player-progress-area') ||
+        document.querySelector('.bpx-player-progress-wrap') ||
+        document.querySelector('.bilibili-player-video-progress');
+
+      let previewStyle = null;
+
+      if (progressArea) {
+        const rect = progressArea.getBoundingClientRect();
+        if (rect.width > 0) {
+          const clientX = rect.left + ratio * rect.width;
+          const clientY = rect.top + rect.height / 2;
+
+          progressArea.dispatchEvent(
+            new MouseEvent('mousemove', {
+              clientX,
+              clientY,
+              bubbles: true,
+              cancelable: true,
+              view: window
+            })
+          );
+        }
+
+        const nativeImg =
+          document.querySelector('.bpx-player-progress-preview-image') ||
+          document.querySelector('.bpx-player-progress-preview div[class*="image"]') ||
+          document.querySelector('.bilibili-player-video-progress-preview div[class*="image"]');
+
+        if (nativeImg && nativeImg.style.backgroundImage && nativeImg.style.backgroundImage !== 'none') {
+          previewStyle = {
+            backgroundImage: nativeImg.style.backgroundImage,
+            backgroundPosition: nativeImg.style.backgroundPosition || '0 0',
+            backgroundSize: nativeImg.style.backgroundSize || '1600px 900px'
+          };
+        }
+      }
+
+      // Fallback: Autonomous videoshot computation
+      if (!previewStyle && this.videoshotData && this.videoshotData.image && this.videoshotData.image.length > 0) {
+        const vs = this.videoshotData;
+        const totalImages = vs.image.length;
+        const cols = vs.img_x_len || 10;
+        const rows = vs.img_y_len || 10;
+        const framesPerSheet = cols * rows;
+        const frameWidth = vs.img_x_size || 160;
+        const frameHeight = vs.img_y_size || 90;
+
+        const totalFrames = totalImages * framesPerSheet;
+        const frameIndex = Math.min(totalFrames - 1, Math.max(0, Math.floor(ratio * totalFrames)));
+
+        const sheetIndex = Math.floor(frameIndex / framesPerSheet);
+        const innerFrame = frameIndex % framesPerSheet;
+        const col = innerFrame % cols;
+        const row = Math.floor(innerFrame / cols);
+
+        let imgUrl = vs.image[sheetIndex];
+        if (imgUrl && imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+
+        previewStyle = {
+          backgroundImage: `url("${imgUrl}")`,
+          backgroundPosition: `-${col * frameWidth}px -${row * frameHeight}px`,
+          backgroundSize: `${cols * frameWidth}px ${rows * frameHeight}px`
+        };
+      }
+
+      return previewStyle;
+    }
+
+    clearNativeProgressHover() {
+      const progressArea =
+        this.container.querySelector('.bpx-player-progress-area') ||
+        this.container.querySelector('.bpx-player-progress-wrap') ||
+        this.container.querySelector('.bpx-player-progress') ||
+        document.querySelector('.bpx-player-progress-area') ||
+        document.querySelector('.bpx-player-progress-wrap') ||
+        document.querySelector('.bilibili-player-video-progress');
+
+      if (progressArea) {
+        progressArea.dispatchEvent(
+          new MouseEvent('mouseleave', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          })
+        );
+      }
+    }
+
     showHUD(options) {
       if (!this.hud) return;
       if (this.hudTimer) clearTimeout(this.hudTimer);
 
+      const previewWrap = this.hud.querySelector('#bili-hud-preview-wrap');
+      const previewImg = this.hud.querySelector('#bili-hud-preview-img');
       const iconEl = this.hud.querySelector('#bili-hud-icon');
       const titleEl = this.hud.querySelector('#bili-hud-title');
       const timeEl = this.hud.querySelector('#bili-hud-time');
       const barBg = this.hud.querySelector('#bili-hud-bar-bg');
       const barFill = this.hud.querySelector('#bili-hud-bar-fill');
+
+      if (options.showPreview && options.previewStyle) {
+        this.hud.classList.add('bili-touch-hud-seeking');
+        previewWrap.style.display = 'block';
+        if (options.previewStyle.backgroundImage) {
+          previewImg.style.backgroundImage = options.previewStyle.backgroundImage;
+        }
+        if (options.previewStyle.backgroundPosition) {
+          previewImg.style.backgroundPosition = options.previewStyle.backgroundPosition;
+        }
+        if (options.previewStyle.backgroundSize) {
+          previewImg.style.backgroundSize = options.previewStyle.backgroundSize;
+        }
+      } else {
+        this.hud.classList.remove('bili-touch-hud-seeking');
+        previewWrap.style.display = 'none';
+      }
 
       if (options.icon !== undefined) {
         iconEl.innerHTML = options.icon || '';
@@ -199,13 +342,18 @@
         const delay = options.hideDelay || 600;
         this.hudTimer = setTimeout(() => {
           this.hud.classList.remove('bili-touch-hud-visible');
+          this.hud.classList.remove('bili-touch-hud-seeking');
+          if (previewWrap) previewWrap.style.display = 'none';
         }, delay);
       }
     }
 
     hideHUDImmediately() {
       if (this.hudTimer) clearTimeout(this.hudTimer);
-      if (this.hud) this.hud.classList.remove('bili-touch-hud-visible');
+      if (this.hud) {
+        this.hud.classList.remove('bili-touch-hud-visible');
+        this.hud.classList.remove('bili-touch-hud-seeking');
+      }
     }
 
     showRipple(x, y) {
@@ -391,11 +539,17 @@
       const timeStr = `${formatTime(targetTime)} / ${formatTime(duration)}`;
       const progress = (targetTime / duration) * 100;
 
+      this.container.classList.add('bili-touch-seeking');
+      const previewStyle = this.updatePreview(targetTime, duration);
+      this.lastPreviewStyle = previewStyle;
+
       this.showHUD({
         icon,
         title,
         time: timeStr,
         progress,
+        showPreview: !!previewStyle,
+        previewStyle,
         autoHide: false
       });
     }
@@ -507,7 +661,14 @@
         if (!isNaN(this.targetSeekTime)) {
           this.video.currentTime = this.targetSeekTime;
         }
-        this.showHUD({ autoHide: true, hideDelay: 400 });
+        this.showHUD({
+          autoHide: true,
+          hideDelay: 400,
+          showPreview: !!this.lastPreviewStyle,
+          previewStyle: this.lastPreviewStyle
+        });
+        this.container.classList.remove('bili-touch-seeking');
+        this.clearNativeProgressHover();
         this.suppressClickUntil = Date.now() + 400;
       } else if (this.gestureLocked) {
         // Volume or Brightness finished
@@ -525,6 +686,8 @@
       if (!this.isTracking || e.pointerId !== this.pointerId) return;
       if (this.longPressTimer) clearTimeout(this.longPressTimer);
       if (this.isLongPressing) this.stopLongPress();
+      this.container.classList.remove('bili-touch-seeking');
+      this.clearNativeProgressHover();
       this.hideHUDImmediately();
       this.cleanupPointer();
     }
@@ -533,6 +696,8 @@
       this.isTracking = false;
       this.gestureLocked = false;
       this.gestureType = null;
+      this.container.classList.remove('bili-touch-seeking');
+      this.clearNativeProgressHover();
       try {
         if (this.pointerId !== null) {
           this.touchLayer.releasePointerCapture(this.pointerId);
@@ -682,6 +847,7 @@
 
     // Check if controller already attached to this container & video
     if (currentController && currentController.container === playerContainer && currentController.video === video) {
+      currentController.loadVideoshotData();
       return;
     }
 

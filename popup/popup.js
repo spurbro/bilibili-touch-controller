@@ -4,6 +4,7 @@
 
 const DEFAULT_CONFIG = {
   enableSeek: true,
+  enableSeekPreview: true,
   seekSensitivity: 90,
   enableVolume: true,
   enableBrightness: true,
@@ -31,6 +32,8 @@ function updateUIState() {
   const enableSeek = document.getElementById('enableSeek').checked;
   const seekWrap = document.getElementById('seekSensitivityWrap');
   if (seekWrap) seekWrap.style.display = enableSeek ? 'flex' : 'none';
+  const seekPreviewItem = document.getElementById('seekPreviewItem');
+  if (seekPreviewItem) seekPreviewItem.style.display = enableSeek ? 'flex' : 'none';
 
   const enableLongPress = document.getElementById('enableLongPress').checked;
   const longPressWrap = document.getElementById('longPressSpeedWrap');
@@ -44,6 +47,7 @@ function loadSettings() {
 
     // Checkboxes
     document.getElementById('enableSeek').checked = !!config.enableSeek;
+    document.getElementById('enableSeekPreview').checked = config.enableSeekPreview !== undefined ? !!config.enableSeekPreview : true;
     document.getElementById('enableVolume').checked = !!config.enableVolume;
     document.getElementById('enableBrightness').checked = !!config.enableBrightness;
     document.getElementById('enableLongPress').checked = !!config.enableLongPress;
@@ -71,6 +75,7 @@ function saveSettings() {
 
   const newConfig = {
     enableSeek: document.getElementById('enableSeek').checked,
+    enableSeekPreview: document.getElementById('enableSeekPreview').checked,
     seekSensitivity: parseInt(document.getElementById('seekSensitivity').value, 10),
     enableVolume: document.getElementById('enableVolume').checked,
     enableBrightness: document.getElementById('enableBrightness').checked,
@@ -92,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
 
   // Switch change listeners
-  const checkboxes = ['enableSeek', 'enableVolume', 'enableBrightness', 'enableLongPress', 'enableDoubleTap', 'enableMouseSimulation'];
+  const checkboxes = ['enableSeek', 'enableSeekPreview', 'enableVolume', 'enableBrightness', 'enableLongPress', 'enableDoubleTap', 'enableMouseSimulation'];
   checkboxes.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', saveSettings);

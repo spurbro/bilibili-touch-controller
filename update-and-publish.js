@@ -85,9 +85,9 @@ async function main() {
     }
   });
 
-  // Zip using powershell
+  // Zip using pwsh
   if (fs.existsSync(zipFilePath)) fs.unlinkSync(zipFilePath);
-  execSync(`powershell -Command "Compress-Archive -Path '${distDir}\\*' -DestinationPath '${zipFilePath}' -Force"`, { stdio: 'inherit' });
+  execSync(`pwsh -Command "Compress-Archive -Path '${distDir}\\*' -DestinationPath '${zipFilePath}' -Force"`, { stdio: 'inherit' });
   fs.rmSync(path.join(__dirname, 'dist_temp'), { recursive: true, force: true });
   console.log('✓ Zip package updated successfully.');
 
@@ -97,7 +97,7 @@ async function main() {
 
   try {
     execSync(`"${gitExe}" add .`, { stdio: 'pipe' });
-    execSync(`"${gitExe}" commit -m "feat: Move all HUDs to top bar with ultra-translucent non-intrusive styling"`, { stdio: 'pipe' });
+    execSync(`"${gitExe}" commit -m "feat: Add video frame thumbnail preview when swiping horizontally (seeking)"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${pushUrl}"`, { stdio: 'pipe' });
     execSync(`"${gitExe}" push origin main`, { stdio: 'pipe' });
     execSync(`"${gitExe}" remote set-url origin "${publicUrl}"`, { stdio: 'pipe' });

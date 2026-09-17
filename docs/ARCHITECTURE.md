@@ -111,8 +111,22 @@ $$t_{\text{target}} = \text{clamp}(0, D, t_{\text{start}} + \Delta t)$$
 3. **合成鼠标点击拦截**：
    设定 `suppressClickUntil` 门限，彻底吞噬手势抬手后产生的合成 `click` 与 `dblclick` 事件。
 
-### 3.4 动态 DOM 监听与 SPA 路由适应
-利用 `MutationObserver` 监控 DOM 树变动，同时配合 URL 历史变更（`popstate`）与周期性健康检查，确保在任何分 P 切换或推荐视频跳转后，手势控制器都能在第一时间自动无缝挂载。
+### 3.4 视频帧截图与雪碧图实时寻址算法 (Video Frame Sprite Preview)
+为了在触控快速滑动时实现 60 FPS 零卡顿的视频帧截图预览，插件创新采用了**双轨雪碧图寻址架构**：
+1. **原生进度条事件反射镜像（Primary Channel）**：
+   - 左右滑动计算出目标时间戳 $t_{\text{target}}$，并在内部对应进度条坐标派发合成 `mousemove` 事件；
+   - 触发 B 站官方播放器原生 Videoshot 状态机，实时镜像 `.bpx-player-progress-preview-image` 的 `background-image` 与 `background-position` 到顶栏 HUD 预览窗中；
+   - 借助 CSS `.bili-touch-seeking` 彻底抑制底部控制栏原生 tooltip 的闪烁，实现顶栏纯净展示。
+2. **自主 Videoshot API 备用解析寻址（Fallback Channel）**：
+   - 针对原生 DOM 未就绪的特殊场景，自动解析当前视频的 `bvid` 异步获取官方雪碧图大图列表与规格；
+   - 根据时间戳比例通过网格数学寻址算法精准计算切片偏移：
+     $$\text{frameIndex} = \lfloor \text{ratio} \times \text{totalFrames} \rfloor$$
+     $$\text{col} = (\text{frameIndex} \pmod{100}) \pmod{10}, \quad \text{row} = \lfloor (\text{frameIndex} \pmod{100}) / 10 \rfloor$$
+     $$\text{posX} = -\text{col} \times 160\text{px}, \quad \text{posY} = -\text{row} \times 90\text{px}$$
+   - 纯 CSS 硬件加速渲染，彻底杜绝切片视频频繁 Seek 带来的网络拥堵与解码掉帧。
+
+### 3.5 动态 DOM 监听与 SPA 路由适应
+利用 `MutationObserver` 监控 DOM 树变动，同时配合 URL 历史变更（`popstate`）与周期性健康检查，确保在任何分 P 切换或推荐视频跳转后，手势控制器与雪碧图数据都能在第一时间自动无缝挂载。
 
 ---
 

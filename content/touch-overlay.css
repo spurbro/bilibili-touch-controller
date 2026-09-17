@@ -69,6 +69,46 @@
   transform: translate(-50%, 0) scale(1);
 }
 
+/* Seeking mode with Frame Preview */
+.bili-touch-hud.bili-touch-hud-seeking {
+  padding: 8px 12px 10px 12px;
+  border-radius: 12px;
+  background: rgba(12, 12, 18, 0.38);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+}
+
+/* Video Frame Thumbnail Preview Window */
+.bili-touch-hud-preview-wrap {
+  width: 160px;
+  height: 90px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  position: relative;
+  display: none;
+}
+
+.bili-touch-hud-preview-img {
+  width: 160px;
+  height: 90px;
+  background-repeat: no-repeat;
+  background-size: 1600px 900px;
+  background-position: 0 0;
+}
+
+/* Suppress native player preview popup at bottom during touch seeking */
+.bili-touch-seeking .bpx-player-progress-preview,
+.bili-touch-seeking .bilibili-player-video-progress-preview,
+.bili-touch-seeking div[class*="player-progress-preview"] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Header row (Icon + Title) */
 .bili-touch-hud-header {
   display: flex;
