@@ -4,7 +4,7 @@
 ### Bilibili Touch Controller for Windows & Microsoft Edge / Chrome
 
 [![GitHub Release](https://img.shields.io/github/v/release/spurbro/bilibili-touch-controller?color=FB7299&label=Release&style=flat-square)](https://github.com/spurbro/bilibili-touch-controller/releases/latest)
-[![Download ZIP](https://img.shields.io/badge/Download-ZIP%20Package-blue?style=flat-square&logo=github)](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.0.0/bilibili-touch-controller-v1.0.0.zip)
+[![Download ZIP](https://img.shields.io/badge/Download-ZIP%20Package-blue?style=flat-square&logo=github)](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.1.0/bilibili-touch-controller-v1.1.0.zip)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-brightgreen.svg?style=flat-square)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Edge%20%7C%20Chrome-blue.svg?style=flat-square)](https://www.microsoft.com/edge)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
@@ -23,7 +23,7 @@
 无需配置任何开发环境，普通用户仅需 3 步即可在 Edge / Chrome 中使用：
 
 ### 1. 下载并解压安装包
-- 点击直达下载最新版本：👉 **[📦 下载 bilibili-touch-controller-v1.0.0.zip](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.0.0/bilibili-touch-controller-v1.0.0.zip)**  
+- 点击直达下载最新版本：👉 **[📦 下载 bilibili-touch-controller-v1.1.0.zip](https://github.com/spurbro/bilibili-touch-controller/releases/download/v1.1.0/bilibili-touch-controller-v1.1.0.zip)**  
   *(或前往 [GitHub Releases 页面](https://github.com/spurbro/bilibili-touch-controller/releases) 下载)*
 - 下载完成后，将 ZIP 压缩包解压到您电脑的任意本地文件夹（例如 `D:\Extensions\bilibili-touch-controller`）。
 
